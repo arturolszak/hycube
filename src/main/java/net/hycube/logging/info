@@ -1,0 +1,7 @@
+This is a dummy package for loggers.
+
+Loggers are named according to this convention:
+net.hycube.log.[loggerCategoryName]
+
+Dev loggers are created separately for each class and follow the following naming rule:
+net.hycube.log.dev.[package].[className]

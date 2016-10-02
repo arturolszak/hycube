@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration>
+	
+	<appender name="file_hycube_user" class="org.apache.log4j.FileAppender">
+		<param name="Threshold" value="DEBUG"/>
+		<param name="File" value="hycube.log"/>
+		<param name="Append" value="true"/>
+		<!-- <param name="DatePattern" value="'.'yyyy-MM-dd"/> -->
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" value="(%d) %-4r [%t] %-5p %C:%L %x - %m%n"/>
+		</layout>
+	</appender>
+	
+	<appender name="file_hycube_messages" class="org.apache.log4j.FileAppender">
+		<param name="Threshold" value="DEBUG"/>
+		<param name="File" value="hycube_messages.log"/>
+		<param name="Append" value="true"/>
+		<!-- <param name="DatePattern" value="'.'yyyy-MM-dd"/> -->
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" value="(%d) %-4r [%t] %-5p %C:%L %x - %m%n"/>
+		</layout>
+	</appender>
+	
+	<appender name="file_hycube_dev" class="org.apache.log4j.FileAppender">
+		<param name="Threshold" value="DEBUG"/>
+		<param name="File" value="hycube_dev.log"/>
+		<param name="Append" value="true"/>
+		<!-- <param name="DatePattern" value="'.'yyyy-MM-dd"/> -->
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" value="(%d) %-4r [%t] %-5p %C:%L %x - %m%n"/>
+		</layout>
+	</appender>
+	
+    <appender name="console_user" class="org.apache.log4j.ConsoleAppender">
+        <param name="Target" value="System.out"/>
+        <param name="Threshold" value="DEBUG"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <!-- The default pattern: Date Priority [Category] Message\n -->
+            <param name="ConversionPattern" value="log.user: (%d) %-4r [%t] %-5p %C:%L %x - %m%n"/>
+        </layout>
+    </appender>
+    
+    <appender name="console_messages" class="org.apache.log4j.ConsoleAppender">
+        <param name="Target" value="System.out"/>
+        <param name="Threshold" value="DEBUG"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <!-- The default pattern: Date Priority [Category] Message\n -->
+            <param name="ConversionPattern" value="log.msg: (%d) %-4r [%t] %-5p %C:%L %x - %m%n"/>
+        </layout>
+    </appender>
+
+    <appender name="console_dev" class="org.apache.log4j.ConsoleAppender">
+        <param name="Target" value="System.out"/>
+        <param name="Threshold" value="DEBUG"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <!-- The default pattern: Date Priority [Category] Message\n -->
+            <param name="ConversionPattern" value="log.dev:  (%d) %-4r [%t] %-5p %C:%L %x - %m%n"/>
+        </layout>
+    </appender>
+    
+    <appender name="console" class="org.apache.log4j.ConsoleAppender">
+        <param name="Target" value="System.out"/>
+        <param name="Threshold" value="DEBUG"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <!-- The default pattern: Date Priority [Category] Message\n -->
+            <param name="ConversionPattern" value="(%d) %-4r [%t] %-5p %C:%L %x - %m%n"/>
+        </layout>
+    </appender>
+
+
+	<logger name="net.hycube.log.user" additivity="false">
+		<level value="warn"/>
+		<appender-ref ref="file_hycube_user"/>
+		<appender-ref ref="console_user"/>
+	</logger>
+	
+	<logger name="net.hycube.log.messages" additivity="false">
+		<level value="warn"/>
+		<appender-ref ref="file_hycube_messages"/>
+		<appender-ref ref="console_messages"/>
+	</logger>
+	
+	<logger name="net.hycube.log.dev" additivity="false">
+		<level value="warn"/>
+		<appender-ref ref="file_hycube_dev"/>
+		<appender-ref ref="console_dev"/>
+	</logger>
+	
+	<logger name="net.hycube.log.dev.net.hycube.join" additivity="false">
+		<level value="warn"/>
+		<appender-ref ref="file_hycube_dev"/>
+		<appender-ref ref="console_dev"/>
+	</logger>
+	
+	<logger name="net.hycube.log.dev.net.hycube.maintenance" additivity="false">
+		<level value="warn"/>
+		<appender-ref ref="file_hycube_dev"/>
+		<appender-ref ref="console_dev"/>
+	</logger>
+	
+	<logger name="net.hycube.log.dev.net.hycube.dht" additivity="false">
+		<level value="warn"/>
+		<appender-ref ref="file_hycube_dev"/>
+		<appender-ref ref="console_dev"/>
+	</logger>
+	
+	
+	<root>
+		<priority value="debug"/>
+		<appender-ref ref="console"/>
+	</root>
+	
+</log4j:configuration>

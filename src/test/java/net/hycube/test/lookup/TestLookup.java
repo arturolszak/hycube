@@ -1,0 +1,276 @@
+package net.hycube.test.lookup;
+
+import java.util.Random;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import net.hycube.HyCubeNodeService;
+import net.hycube.HyCubeSimpleNodeService;
+import net.hycube.HyCubeSimpleSchedulingNodeService;
+import net.hycube.NodeService;
+import net.hycube.core.HyCubeNodeId;
+import net.hycube.core.InitializationException;
+import net.hycube.core.NodeId;
+import net.hycube.core.NodePointer;
+import net.hycube.environment.DirectEnvironment;
+import net.hycube.environment.Environment;
+import net.hycube.join.JoinWaitCallback;
+import net.hycube.lookup.LookupWaitCallback;
+import net.hycube.messaging.data.ReceivedDataMessage;
+import net.hycube.metric.Metric;
+
+public class TestLookup {
+
+	
+	
+	/**
+	 * @param args
+	 */
+	
+	public static void main(String[] args) {
+		
+		String ip = "127.0.0.1";
+		//String ip = "192.168.2.110";
+		int startPort = 55000;
+		//int numNodes = 50;
+		int numNodes = 100;
+		int recoveryRepeat = 2;
+		int lookupsNum = 50;
+		
+		int testsNum = 1;
+		
+		for (int i = 0; i < testsNum; i++) {
+			System.out.println("Test #" + i);
+			runTest(ip, startPort, numNodes, recoveryRepeat, lookupsNum);
+			startPort += numNodes;
+			
+			try {
+				Thread.sleep(3000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			
+		}
+		
+		System.out.println();
+		
+	}
+	
+	
+	@SuppressWarnings("unchecked")
+	public static void runTest(String ip, int startPort, int numNodes, int recoveryRepeat, int lookupsNum) {
+		
+		Random rand = new Random();
+		
+		String[] addresses = new String[numNodes];
+		for (int i=0; i<numNodes; i++) {
+			String address = ip + ":" + (startPort+i);
+			addresses[i] = address;
+		}
+
+		
+		int[] missedNums = new int[numNodes];
+		for (int i = 0; i < numNodes; i++) missedNums[i] = 0;
+		
+		
+		try {
+			
+			int n = addresses.length;
+			
+			Environment environment = DirectEnvironment.initialize();
+			
+			HyCubeNodeService[] ns = new HyCubeNodeService[n];
+
+			NodeId[] nodeIds = new NodeId[n];
+			LinkedBlockingQueue<ReceivedDataMessage>[] msgQueues = (LinkedBlockingQueue<ReceivedDataMessage>[]) new LinkedBlockingQueue<?>[n];
+			
+			System.out.print("Join: " );
+			for (int i = 0; i < n; i++) {
+				
+				System.out.print(i);
+				System.out.flush();
+				
+				JoinWaitCallback joinWaitCallback = new JoinWaitCallback();
+				String bootstrap = null;
+				
+				if (i >= 1) {
+					int bootstrapIndex = rand.nextInt(i);
+					bootstrap = addresses[bootstrapIndex];
+				}
+				
+				NodeId nodeId = HyCubeNodeId.generateRandomNodeId(4, 32);
+				
+				//!!! SET APPROPRIATE LINE TO TEST ONE OF THE SERVICES:
+				int service = 1;
+				
+				switch (service) {
+					case 1:
+						ns[i] = HyCubeSimpleNodeService.initialize(environment, nodeId, addresses[i], bootstrap, joinWaitCallback, null, 0, true, null, null);
+						break;
+					case 2:
+						ns[i] = HyCubeSimpleSchedulingNodeService.initialize(environment, nodeId, addresses[i], bootstrap, joinWaitCallback, null, 0, true, null, null);
+						break;
+					default:
+						return;
+				}
+				
+				
+				nodeIds[i] = nodeId;
+				msgQueues[i] = ns[i].registerPort((short)0);
+
+				try {
+					joinWaitCallback.waitJoin();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				
+				System.out.print("#,");
+				System.out.flush();
+			}
+			System.out.println();
+			
+			
+			
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+
+			for (int r = 0; r < recoveryRepeat; r++) {
+				System.out.print("Recovering: ");
+				System.out.flush();
+				for (int i = n-1; i >= 0; i--) {
+					System.out.print(i + ",");
+					System.out.flush();
+					
+					ns[i].recover();
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+
+					
+				}
+				System.out.println();
+			}
+			
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			
+			
+			for (int lookup = 0; lookup < lookupsNum; lookup++) {
+				System.out.println();
+				NodeId lookupNodeId = HyCubeNodeId.generateRandomNodeId(4, 32);
+				
+				for (NodeService serv : ns) {	
+					System.out.println("Lookup to " + lookupNodeId.toHexString() + " from node " + serv.getNode().getNodeId().toHexString());
+					NodePointer res = lookup(serv, 0, lookupNodeId);
+					
+					if (res != null) {
+						int closerBefore = 0;
+						double dist = HyCubeNodeId.calculateDistance((HyCubeNodeId) res.getNodeId(), (HyCubeNodeId)lookupNodeId, Metric.EUCLIDEAN);
+						for (NodeId id : nodeIds) {
+							double nDist = HyCubeNodeId.calculateDistance((HyCubeNodeId) id, (HyCubeNodeId)lookupNodeId, Metric.EUCLIDEAN);
+							if (nDist < dist) closerBefore++;
+						}
+						System.out.println("Closer missed: " + closerBefore);
+						missedNums[closerBefore]++;
+					}
+					
+				}
+				
+				System.out.println();
+				
+			}
+			
+				
+			
+			
+			int displayDetailed = 5;
+			System.out.println();
+			for (int i = 0; i < numNodes && i < displayDetailed; i++) {
+				System.out.println(i + " nodes missed in " + missedNums[i] + " cases.");
+			}
+			int moreNodesMissedCases = 0;
+			for (int i = displayDetailed; i < numNodes; i++) {
+				moreNodesMissedCases = moreNodesMissedCases + missedNums[i];
+			}
+			System.out.println("More nodes missed in " + moreNodesMissedCases + " cases.");
+			System.out.println();	
+			
+			
+			
+			
+			
+			try {
+				Thread.sleep(10000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			
+			
+			
+
+			System.out.print("Discarding: ");
+			System.out.flush();
+			for (int i = 0; i < n; i++) {
+				System.out.print(i + ",");
+				System.out.flush();
+				ns[i].discard();
+				
+				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+
+			}
+			System.out.println("Discarded.");
+			
+			environment.discard();
+			
+			System.out.println("*** Finished ***");
+			
+			
+			
+			
+		} catch (InitializationException e) {
+			e.printStackTrace();
+		}
+		
+
+	}
+
+
+	private static NodePointer lookup(NodeService serv, int i, NodeId lookupNodeId) {
+		
+		LookupWaitCallback lookupCallback = new LookupWaitCallback();
+		
+		serv.lookup(lookupNodeId, lookupCallback, null);
+		
+		NodePointer lookupResult = null;
+		try {
+			lookupResult = lookupCallback.waitForResult(0);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		if (lookupResult == null) System.out.println("Lookup result null");
+		else System.out.print("Lookup result: " + lookupResult.getNodeId().toString() + ", " + lookupResult.getNetworkNodePointer().getAddressString() + ". ");
+		
+		return lookupResult;
+		
+	}
+	
+	
+	
+
+	
+	
+
+	
+}

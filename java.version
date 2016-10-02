@@ -1,0 +1,18 @@
+Supported Java versions (source/target versions):
+1.6
+1.7
+1.8
+
+The version may be controlled by specifying the following properties for the Maven build:
+
+java.version.source
+java.version.target
+
+or (for both, source and target):
+
+java.version
+
+The versions are written in the manifest file with the following header names:
+
+X-Compile-Source-JDK
+X-Compile-Target-JDK
