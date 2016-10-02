@@ -1,0 +1,1 @@
+HyCube is a distributed hash table based on a hierarchical hypercube geometry, employing a novel variable metric adopting the Steinhaus transform. The use of the variable metric and the hierarchical hypercube geometry allow reaching very good performance of the network and a very high level of resilience to node failures.
