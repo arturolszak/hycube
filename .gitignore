@@ -23,3 +23,8 @@ local.properties
 ### Maven
 target/
 .DS_Store
+
+### HyCube
+hycube.log
+hycube_dev.log
+hycube_messages.log
