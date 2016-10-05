@@ -117,7 +117,7 @@
                                     If both the original and the shaded artifact should
                                     be installed/deployed to the repository, one can configure
                                     the plugin to attach the shaded artifact as a secondary artifact -->
-                                    <!--<shadedArtifactAttached>true</shadedArtifactAttached>-->
+                                    <shadedArtifactAttached>true</shadedArtifactAttached>
                                     <relocations>
                                         <relocation>
                                             <pattern>org.apache</pattern>
