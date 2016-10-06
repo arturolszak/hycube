@@ -358,10 +358,8 @@ public class UDPNetworkAdapter implements NetworkAdapter {
 		byte[] byteArray = msg.getBytes();
 		InetSocketAddress inetAddr = udpNodePointer.getInetSocketAddress();	//new InetSocketAddress(udpNodePointer.getIP(), udpNodePointer.getPort()); 
 		
-		DatagramPacket packetToSend = null;
-		packetToSend = new DatagramPacket(byteArray, byteArray.length, inetAddr);
-		
 		try {
+			DatagramPacket packetToSend = new DatagramPacket(byteArray, byteArray.length, inetAddr);
 			socket.send(packetToSend);
 		} catch (IOException e) {
 			throw new NetworkAdapterException("An exception thrown while sending the packet.", e);
