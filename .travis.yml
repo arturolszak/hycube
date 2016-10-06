@@ -6,6 +6,10 @@ jdk:
   - openjdk8
   - openjdk7
 
+before_install:
+
+install:
+
 script: mvn clean verify -P shade -P sources -P javadoc -Djava.version=1.6
 
 after_success:
