@@ -8,7 +8,9 @@ jdk:
 
 before_install:
 
-script: mvn clean verify -P shade,sources,javadoc
+install: mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -Djava.version=1.6
+
+script: mvn clean verify -P shade,sources,javadoc -Djava.version=1.6
 
 after_success:
 after_failure:
