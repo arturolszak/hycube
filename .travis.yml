@@ -6,7 +6,7 @@ jdk:
   - openjdk8
   - openjdk7
 
-script: mvn clean verify -P shade -P sources -P javadoc
+script: mvn clean verify -P shade -P sources -P javadoc -Djava.version=1.6
 
 after_success:
 after_failure:
