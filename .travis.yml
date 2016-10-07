@@ -12,7 +12,7 @@ before_install:
   - echo "${TRAVIS_BRANCH}"
   - echo "${TRAVIS_TAG}"
   - test "$TRAVIS_TAG" = "" && echo "tag is empty"
-  - test "$TRAVIS_TAG" != "" && echo "tag is NOT empty"
+  - test "$TRAVIS_TAG" <> "" && echo "tag is NOT empty"
   - if [ "$TRAVIS_TAG" == "" ] ; then echo "test1 passed"
   - test $TRAVIS_BRANCH != "test-travis" && echo "branch not test-travis"
   - test $TRAVIS_TAG != "" && mvn release:update-versions -DdevelopmentVersion="$TRAVIS_TAG"
