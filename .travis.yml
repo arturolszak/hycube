@@ -11,7 +11,6 @@ before_install:
   - echo "$TRAVIS_TAG"
   - echo "${TRAVIS_BRANCH}"
   - echo "${TRAVIS_TAG}"
-  - test $var1.defined = true && echo "var1 not defined"
   - test "$TRAVIS_TAG" = "" && echo "tag is empty"
   - test "$TRAVIS_TAG" != "" && echo "tag is NOT empty"
   - if [ "$TRAVIS_TAG" == "" ] ; then echo "test1 passed"
