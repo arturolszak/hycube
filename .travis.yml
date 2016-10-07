@@ -7,16 +7,17 @@ jdk:
 #  - openjdk6
 
 before_install:
-  - echo "$TRAVIS_BRANCH"
-  - echo "$TRAVIS_TAG"
-  - echo "${TRAVIS_BRANCH}"
-  - echo "${TRAVIS_TAG}"
-  - test "$TRAVIS_TAG" = "" && echo "tag is empty" || echo "tag is not empty"
-  - test -z "$TRAVIS_TAG" && echo "travis empty"
-#  - test -n "$TRAVIS_TAG" && echo "travis NOT empty"
+  - test "$TRAVIS_TAG" = "" \
+      && mvn release:update-versions -DdevelopmentVersion="$TRAVIS_BRANCH-SNAPSHOT" \
+    || mvn release:update-versions -DdevelopmentVersion="$TRAVIS_TAG"
+#  - echo "$TRAVIS_BRANCH"
+#  - echo "$TRAVIS_TAG"
+#  - echo "${TRAVIS_BRANCH}"
+#  - echo "${TRAVIS_TAG}"
+#  - test "$TRAVIS_TAG" = "" && echo "tag is empty" || echo "tag is not empty"
+#  - test "$TRAVIS_TAG" && echo "travis empty"
 #  - test "$TRAVIS_TAG" != "" && echo "tag is NOT empty"
 #  - test $TRAVIS_BRANCH != "test-travis" && echo "branch not test-travis"
-  - test "$TRAVIS_TAG" = "" && mvn release:update-versions -DdevelopmentVersion="$TRAVIS_BRANCH-SNAPSHOT" || mvn release:update-versions -DdevelopmentVersion="$TRAVIS_TAG"
 #  - test $TRAVIS_TAG = "" && mvn release:update-versions -DdevelopmentVersion="$TRAVIS_BRANCH-SNAPSHOT"
 #  - mvn release:update-versions -DdevelopmentVersion="${TRAVIS_BRANCH}"
 
