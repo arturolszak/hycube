@@ -6,7 +6,8 @@ jdk:
 #  - openjdk7
 #  - openjdk6
 
-before_install: mvn release:update-versions -DdevelopmentVersion="${TRAVIS_BRANCH}-SNAPSHOT" -DreleaseVersion="{TRAVIS_BRANCH}"
+before_install:
+  mvn release:update-versions -DdevelopmentVersion="${TRAVIS_TAG}"
 
 install: true
 
