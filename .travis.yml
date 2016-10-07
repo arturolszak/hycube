@@ -6,9 +6,8 @@ jdk:
 #  - openjdk7
 #  - openjdk6
 
-before_install:
+before_install: mvn org.apache.maven.plugins:maven-release-plugin:2.5.3:update-versions
 #  mvn --batch-mode org.apache.maven.plugins:maven-release-plugin:2.5.3:update-versions -DdevelopmentVersion="9.9.9.9-SNAPSHOT"
-  mvn org.apache.maven.plugins:maven-release-plugin:2.5.3:update-versions
 
 install: true
 
