@@ -6,7 +6,7 @@ jdk:
 #  - openjdk7
 #  - openjdk6
 
-before_install: mvn org.apache.maven.plugins:maven-release-plugin:2.5.3:update-versions
+before_install: mvn org.apache.maven.plugins:maven-release-plugin:2.5.3:update-versions -DdevelopmentVersion="${TRAVIS_BRANCH}"
 
 install: true
 
