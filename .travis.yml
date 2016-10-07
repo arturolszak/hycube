@@ -7,7 +7,16 @@ jdk:
 #  - openjdk6
 
 before_install:
-  mvn release:update-versions -DdevelopmentVersion="${TRAVIS_TAG}"
+  - name: "set project version based on the tag"
+    command: export VERSION=${TRAVIS_TAG}
+    when: ${TRAVIS_TAG} != nil
+
+  - name: "set project version based on the branch name"
+    command: export VERSION=${TRAVIS_BRANCH}-SNAPSHOT
+    when: ${TRAVIS_TAG} == nil
+
+  - name: "set project version in pom"
+    command: mvn release:update-versions -DdevelopmentVersion="${VERSION}"
 
 install: true
 
