@@ -9,7 +9,7 @@ jdk:
 before_install:
   - test "$TRAVIS_TAG" = "" \
       && mvn release:update-versions -DdevelopmentVersion="$TRAVIS_BRANCH-SNAPSHOT" \
-    || mvn release:update-versions -DdevelopmentVersion="$TRAVIS_TAG"
+    || mvn release:update-versions -DdevelopmentVersion="$TRAVIS_TAG" \
 #  - echo "$TRAVIS_BRANCH"
 #  - echo "$TRAVIS_TAG"
 #  - echo "${TRAVIS_BRANCH}"
