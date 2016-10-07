@@ -39,6 +39,3 @@ deploy:
 #find . -name "pom.xml" -exec sed -i -e "s/9.9.9.9-SNAPSHOT/$version/g" {} +
 #echo "Changed version in pom.xml files to $version"
 #exit 0
-
-
--e --quiet -P buildAgentDb -DUSER=agent -Dtest.db.schema=agent_test -DskipTests=%skipTests%
