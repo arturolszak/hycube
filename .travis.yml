@@ -7,9 +7,9 @@ jdk:
 #  - openjdk6
 
 before_install:
-  - [[ "${TRAVIS_TAG}" == "" ]] && export VERSION=${TRAVIS_TAG}
-  - [[ "${TRAVIS_TAG}" != "" ]] && export VERSION=${TRAVIS_BRANCH}-SNAPSHOT
-  - mvn release:update-versions -DdevelopmentVersion="${VERSION}"
+  - shell: [[ "${TRAVIS_TAG}" == "" ]] && mvn release:update-versions -DdevelopmentVersion="${TRAVIS_TAG}"
+  - shell: [[ "${TRAVIS_TAG}" != "" ]] && mvn release:update-versions -DdevelopmentVersion="${TRAVIS_BRANCH}-SNAPSHOT"
+#  - mvn release:update-versions -DdevelopmentVersion="${TRAVIS_BRANCH}"
 
 install: true
 
