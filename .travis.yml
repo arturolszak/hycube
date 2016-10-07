@@ -6,6 +6,10 @@ jdk:
 #  - openjdk7
 #  - openjdk6
 
+before_install:
+#  mvn --batch-mode org.apache.maven.plugins:maven-release-plugin:2.5.3:update-versions -DdevelopmentVersion="9.9.9.9-SNAPSHOT"
+  mvn org.apache.maven.plugins:maven-release-plugin:2.5.3:update-versions
+
 install: true
 
 #script: mvn clean verify -P shade,sources,javadoc -Djava.version=1.6
@@ -20,3 +24,21 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
+
+
+#echo 'Will change the version in pom.xml files...'
+#branch=$(git rev-parse --abbrev-ref HEAD)
+#
+#version="$branch-SNAPSHOT"
+#version="$(echo $version | sed 's/bugfix\///g')"
+#version="$(echo $version | sed 's/feature\///g')"
+#version="$(echo $version | sed 's/release\/skye-//g')"
+#version="${version^^}"
+#
+#/home/agent/buildagent/tools/maven3/bin/mvn --batch-mode org.apache.maven.plugins:maven-release-plugin:2.5.3:update-versions -DdevelopmentVersion="9.9.9.9-SNAPSHOT"
+#find . -name "pom.xml" -exec sed -i -e "s/9.9.9.9-SNAPSHOT/$version/g" {} +
+#echo "Changed version in pom.xml files to $version"
+#exit 0
+
+
+-e --quiet -P buildAgentDb -DUSER=agent -Dtest.db.schema=agent_test -DskipTests=%skipTests%
