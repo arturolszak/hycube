@@ -7,8 +7,8 @@ jdk:
 #  - openjdk6
 
 before_install:
-  - test $TRAVIS_BRANCH = && echo "branch empty"
-  - test $TRAVIS_BRANCH != && echo "branch not empty"
+  - test $TRAVIS_BRANCH = test-travis && echo "branch test-travis"
+  - test $TRAVIS_BRANCH != test-travis && echo "branch not test-travis"
   - test $TRAVIS_TAG" != "" && mvn release:update-versions -DdevelopmentVersion="${TRAVIS_TAG}"
   - test $TRAVIS_TAG = "" && mvn release:update-versions -DdevelopmentVersion="${TRAVIS_BRANCH}-SNAPSHOT"
 #  - mvn release:update-versions -DdevelopmentVersion="${TRAVIS_BRANCH}"
