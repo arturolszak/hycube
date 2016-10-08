@@ -2,9 +2,9 @@ language: java
 
 jdk:
   - oraclejdk8
-#  - oraclejdk7
-#  - openjdk7
-#  - openjdk6
+  - oraclejdk7
+  - openjdk7
+  - openjdk6
 
 # for tags (and releases), use the tag name as the development version, and use the branch name with "-SNAPSHOT" suffix otherwise as the development version and release version:
 before_install:
