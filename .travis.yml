@@ -7,10 +7,10 @@ jdk:
 #  - openjdk6
 
 # for tags (and releases), use the tag name as the development version, and use the branch name with "-SNAPSHOT" suffix otherwise as the development version and release version:
-before_install:
-  - test "$TRAVIS_TAG" = "" && echo "tag not set -> snapshot version" || echo "tag is set -> tag name is the version"
-  - echo mvn release:update-versions -DdevelopmentVersion=\"$TRAVIS_TAG\" -DreleaseVersion=\"$TRAVIS_TAG\"
-  - test "$TRAVIS_TAG" == "" && mvn release:update-versions -DdevelopmentVersion="$TRAVIS_BRANCH-SNAPSHOT" || mvn -e release:update-versions -DdevelopmentVersion=\"$TRAVIS_TAG\"
+before_install: mvn release:update-versions -DdevelopmentVersion="$TRAVIS_BRANCH"
+#  - test "$TRAVIS_TAG" = "" && echo "tag not set -> snapshot version" || echo "tag is set -> tag name is the version"
+#  - echo mvn release:update-versions -DdevelopmentVersion=\"$TRAVIS_TAG\" -DreleaseVersion=\"$TRAVIS_TAG\"
+#  - test "$TRAVIS_TAG" == "" && mvn release:update-versions -DdevelopmentVersion="$TRAVIS_BRANCH-SNAPSHOT" || mvn -e release:update-versions -DdevelopmentVersion=\"$TRAVIS_TAG\"
 
 install: true
 
