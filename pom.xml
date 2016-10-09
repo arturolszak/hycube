@@ -11,10 +11,33 @@
     <packaging>jar</packaging>
 
     <name>HyCube</name>
+    <description>HyCube is a distributed hash table based on a hierarchical hypercube geometry, employing a novel variable metric adopting the Steinhaus transform.</description>
     <url>http://www.hycube.net</url>
     <organization>
         <name>Artur Olszak</name>
     </organization>
+
+    <licenses>
+        <license>
+            <name>BSD 2-Clause License</name>
+            <url>http://www.opensource.org/licenses/BSD-2-Clause</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Artur Olszak</name>
+            <email>aolszak@gmail.com</email>
+            <organization>Artur Olszak</organization>
+            <organizationUrl>http://arturolszak.net</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/arturolszak/hycube.git</connection>
+        <developerConnection>scm:git:ssh://github.com:arturolszak/hycube.git</developerConnection>
+        <url>http://github.com/arturolszak/hycube</url>
+    </scm>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -184,7 +207,7 @@
                 </executions>
                 <configuration>
                     <!--<descriptorRefs>-->
-                        <!--<descriptorRef>jar-with-dependencies</descriptorRef>-->
+                    <!--<descriptorRef>jar-with-dependencies</descriptorRef>-->
                     <!--</descriptorRefs>-->
                     <descriptors>
                         <descriptor>src/assembly/assembly-jar-with-dependencies.xml</descriptor>
@@ -196,6 +219,9 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>versions-maven-plugin</artifactId>
                 <version>2.3</version>
+                <configuration>
+                    <generateBackupPoms>false</generateBackupPoms>
+                </configuration>
             </plugin>
 
         </plugins>
