@@ -29,3 +29,5 @@ hycube.log
 hycube_dev.log
 hycube_messages.log
 notes-local.txt
+src/documentation/library_doc_tex/tmp/**
+src/documentation/protocol_doc_tex/tmp/**
