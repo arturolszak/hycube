@@ -1,5 +1,10 @@
 language: java
 
+env:
+  global:
+    - SONATYPE_USERNAME=yourusername
+    - secure: "dnOxvALDxzUeiueR61d7gVWgf7u/t3PDLRF5Xs3UNB9WkKhhIBhePVMn0GEnbEeWKUBlH5wEAkdGSJhfwZWiD0qH6vvTQyzmCm+FiCMPabRxdKDvF9gLMcRIlCjvw0wxbT26Qn+UjGFjaYixJdNqPpoj+2Bcx9fkjq9jyGm01d5Y3psJNh//HLw9asOwvCzGd9Xpzlt2mGaXESxhqBYuX2/CJGQ07o9qG47HNBvV0Ubr6SFvGm3sfVMPJbhmZxe6j7iy2Nh7zNXUbawXLiLT0yJIExkKpJvKeMdUIJ2oaTsv4bBAvMKQYvuq7GipymZDBNr1NdCAVi0aNE9Ke6rtvk10dVhXYxwtBFwbaWWnpDmQtKGuluUTHsAfCwpKbqaMc29qYSD8jEHJEscXVtMsNSknOZrVbZBO21cyzZhKaSeugvCYsqvij54ESWLulqhjcxh8G4urUUYOkJN6X7sQBT1RIT6JQm7yaFuGLarQd7TEOnsIFeD+jijeLMsLxPXQlEBdnw5Ah4XGC7LnKCE+IiRbQB8rvsFHwE2sPLPmXDQEmt9wvDi2jizd231weO8c70RnpwZSHRcxXsKsWUUKSafwji9RLTx7WgXc01VYGqaouLZY+gTEvcOuuEwKrqGrht59dS3xqkrBTBxN73rHRiLP7+zcKJk09lcB76ASFQM="
+
 jdk:
   - oraclejdk8
   - oraclejdk7
@@ -27,3 +32,6 @@ deploy:
   on:
     tags: true
     jdk: oraclejdk8
+
+after_success:
+  - mvn deploy -DskipTests=true --settings .travis/settings.xml
