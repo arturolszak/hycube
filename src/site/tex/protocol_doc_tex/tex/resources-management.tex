@@ -1,0 +1,166 @@
+
+\chapter{Managing resources}
+\label{sec:resourcesManagement}
+
+This chapter focuses on the resource storage architecture of \emph{HyCube} and describes individual DHT operations. Possible operations on the resources in \emph{HyCube} include inserting resources to the DHT (PUT) and retrieving resources (GET). Additionally, \emph{HyCube} supports refreshing resources (REFRESH) - updating resource expiration times, removing resources from the DHT (DELETE), and resource replication among nodes. In \emph{HyCube}, the nature of resources, as well as the way of calculating the resource key depends at the application - \emph{HyCube} provides generic support for any resource type. The key (hash) is expected to be within the node identifier space - $(d \cdot l)$-bit number ($d$ - the number of dimensions, $l$ - the number of levels of the hierarchical hypercube), and the node responsible for resources with the hash value $key$ is the closest node to $key$ (Euclidean metric) among all nodes existing in the system. However, to increase the availability and provide load balancing, the resource may be replicated to other nodes (certain number of closest nodes to $key$).
+
+There are two main approaches for storing resources - one is based on storing the actual resources (for example files) by the DHT nodes to which the resource keys are mapped, while the second approach is based on storing pointers by the DHT nodes - the information where individual resources are stored (for example from which nodes particular files may be downloaded). The technique adopted by \emph{HyCube} is universal and the choice which approach is used is made at the application level. The resource entries in \emph{HyCube} (stored by nodes) consist of a resource descriptor (metadata) and resource data. However, the data may be empty, and the pointer to the actual data might be stored within the resource descriptor, or within the data field. The resource descriptor consists of a certain number of key-value pairs (both keys and values are text strings). There are four predefined keys for resource descriptors:
+
+\pagebreak
+
+\begin{itemize}
+	\renewcommand{\labelitemi}{$\bullet$}
+	\item \emph{\textbf{resourceId}}	- should be a unique identifier of the resource, allowing to unambiguously distinguish it from any other resource
+	\item \emph{\textbf{resourceUrl}}	- determines the location of the resource, allowing to unambiguously locate the resource copy among possible multiple copies/instances of the same resource (having the same value of resourceId)
+	\item \emph{\textbf{resourceName}}	- the name of the resource
+	\item \emph{\textbf{resourceType}}	- resource type (possible values, as well as the way the type is used, are application-specific)
+\end{itemize}
+
+Specifying values for \emph{resourceId} and \emph{resourceUrl} is mandatory, because these values are used by the resource management algorithms (storing, refreshing, getting, deleting and replication). A resource key may theoretically be the same for multiple different resources (usually it is the result of a hash function on the resource name or content), and \emph{resourceId} is essential to unambiguously distinguish the resources. If the resource entries stored in the DHT are used only as references to nodes storing actual resources, \emph{resourceUrl} value should make it possible to uniquely locate the resource copy that the entry points. Depending on a system parameter value, nodes may store multiple copies of the same resource if the \emph{resourceUrl} values are different.
+
+In addition to four predefined resource descriptor keys, at the application level, additional keys may be defined. The resource metadata might then be used to apply additional query criteria on the resources returned by nodes - only resources matching all criteria specified in queries (GET) would be returned to the requesting node. The criteria might also be used when deleting resources from the DHT.
+
+The following sections describe the operations supported by \emph{HyCube} DHT. The discussion focuses on operations on resource entries and assumes that they contain the resource data. If the data is, in fact, located somewhere else, and resource entries are only pointers, it is assumed that the actual data insertion, retrieval and deletion is handled by the external application, beyond the scope of \emph{HyCube}.
+
+
+
+
+\section{Storing resources in the DHT}
+
+The PUT operation allows a node to store a resource in the distributed hash table. A node initiating a PUT operation routes a PUT message containing the resource descriptor (and data) specifying the resource key as the message recipient. The message is routed to the closest node to the specified key (until no further routing is possible), which saves the resource in its local storage and sends the status of the operation (PUT\_REPLY message containing the information whether the resource was saved in the node's local storage or not) directly to the requesting node. Before storing the resource, the closest node checks whether it is one of the $k_{store}$ closest nodes to the specified key ($k_{store}$ is the system parameter). Based on this check, the node decides whether the resource should be accepted or not. The check is made based on analyzing the local neighborhood set. For that purpose, a local estimation of the network ``density'' $\rho$ (the author's definition) is calculated as follows:
+
+\begin{equation}
+\rho = \frac{\sum_{i=0}^{t} \rho_i}{t+1}
+\end{equation}
+
+\noindent
+where $\rho_i$ is defined as follows:
+
+\begin{equation}
+\rho_i = \frac{\left|\{N \in NS : dist(N) \leq dist(N_i)\}\right|}{dist(N_i)^d}
+\end{equation}
+
+\noindent
+where $NS$ is the neighborhood set, $dist(N)$ denotes the distance to node $N$, $d$ is the number of dimensions of the hierarchical hypercube, and $t \in [0, |NS|-1]$ is the node index (in the neighborhood set ordered ascending by distances) calculated as follows:
+
+\begin{equation}
+t = \max \big(0, \mathop{\mathrm{round}}(\varphi \cdot |NS|) - 1 \big)
+\end{equation}
+
+\noindent
+where $\varphi \in (0,1]$ is a system parameter - the quantile function threshold, determining what number of closest neighborhood set nodes should be taken into account for calculating the density. Each density $\rho_i$ represents the number of nodes in a unit $d$-sphere calculated based on $(i+1)$-th node (the value $dist(N_i)^d$ in the denominator is proportional to the volume ($d$-dimensional volume) of a unit $d$-sphere, so $\rho_i$ is proportional to the real local density). $\rho$ is the average density - based on all $t+1$ nodes. Calculating the average value makes the density estimation less vulnerable to fluctuations of single node distances.
+
+Based on $\rho$, it is possible to estimate the number of nodes in the system in a $d$-sphere of any given radius $r$:
+
+\begin{equation}
+n = \rho \cdot r^d
+\end{equation}
+
+\noindent
+Thus, the estimated radius of the $d$-sphere containing $k$ closest nodes to any given key may be calculated as:
+
+\begin{equation}
+r_k = \left(\frac{k}{\rho}\right)^{\frac{1}{d}}
+\end{equation}
+
+Having calculated $r_k$ for $k = k_{store}$, it is possible to estimate whether the node is one of the $k_{store}$ closest nodes to any given key - the node should check if the distance to the key is less than or equal to $r_k$. However, such en estimation might not be accurate enough. The radius used for the density calculation is the minimum radius covering the number of nodes considered (distance to $N_i$), which may cause nodes to incorrectly estimate the density, resulting in the number of nodes accepting resources being smaller than $k_{store}$. Taking this problem into account, it is necessary to scale the estimated value $r_k$, and the node should rather check whether the following condition is met:
+
+\begin{equation}
+dist(key) \leq r_k \cdot \xi
+\end{equation}
+
+\noindent
+$\xi$ is the system parameter - estimated distance coefficient. The value should be adjusted for the chosen value of $\varphi$. The higher is the value of this parameter, the more nodes will accept resources, considering themselves as one of $k_{store}$ closest nodes to the resource key. The value should be large enough to ensure that resources will be accepted by at least $k_{store}$ nodes in the system, regardless of their key. Because for certain nodes, the locally calculated density may be smaller than the average density, for certain keys, more nodes than $k_{store}$ could potentially accept the resource. This is however not a serious issue, meaning that the resource will be more likely to be accepted in less dense areas, which would have positive impact on replication under churn (replication is discussed in Section \ref{sec:replication}).
+
+When the neighborhood set nodes selection forces the diversity of directions in which the nodes are located, the most distant neighbors might not reflect the real closest existing nodes (omitting some close nodes). In such a case the real density could be higher than estimated. Performed simulations showed that, in such a case, the numbers of nodes accepting resources start growing rapidly for $\varphi > 0.5$. Because forcing uniform distribution of neighborhood set nodes is the default behavior in \emph{HyCube}, $\varphi$ should be given a value smaller than 1 to achieve better accuracy (skipping the most distant nodes). However, too small values of $\varphi$ would cause the density to be calculated taking only a very small number of nodes into account. Although the density estimation may skip some close nodes even for smaller values of $\varphi$, the performed simulations indicated that the value $\varphi=0.5$ provides good and relatively stable density estimation (relatively small variance of the numbers of accepting nodes).
+
+The simulation results indicated that, for $\varphi=0.5$, the values of $\xi \geq 1.1$ allow resources to be accepted by at least $k_{store}$ nodes for great majority of randomly generated keys. For values $\xi \geq 1.2$, almost for all tests, at least 8 nodes accepted the resources. $\xi$ should be given a higher value if the nodes should be accepted by more than $k_{store}$ nodes, for example to force accepting resources by each of $k_{store}$ closest nodes to the key (which is a different condition than accepting resources by any $k_{store}$ nodes\footnote{Because the local density may be different in the proximity of the estimating node, and the resource key, certain more distant nodes may accept the resource, while some close nodes may reject the resource.}). It may, however, cause resources to be potentially accepted by a larger number of nodes. When resources are required to be accepted by a certain number of closest nodes (by all of the closest nodes) with high probability, it may also be ensured by increasing the value of $k_{store}$, leaving the value $\xi$ equal to 1.1 or 1.2, which would also cause the resources to be accepted by more nodes, at the same time, increasing the probability of accepting resources by the closest nodes to the resource keys. The values of these parameters should be adjusted to actual needs, depending on the application.
+
+When a node accepts a resource, it stores the resource in its local storage, making it accessible for other nodes to retrieve (GET). Because potentially, there might be many resource entries with the same key, but not representing the same resource (different \emph{resourceId}), such resources are considered separate entities and are stored separately. Furthermore, it is possible for a node (depending on the value of a system parameter) to store multiple resources with the same \emph{resourceId}, but having different values of \emph{resourceUrl}. Such resource entries represent the same resource located physically in different locations. The maximum number of resource entries stored for any \emph{resourceId} is determined by the value of another system parameter.
+
+When resources are being stored by nodes, they are assigned expiration times (the resource validity time is determined by a system parameter). After the expiration time elapses for any resource, the resource is deleted from node's local storage.
+
+
+
+\section{Refreshing resources in the DHT}
+
+As described in the previous section, every resource is given an expiration time, and the resource entry contains the last refresh time. After the expiration time (\emph{refreshTime} + \emph{expirationTime}), the resource is deleted from the storing node's local storage. To prevent deleting resources, the node placing the resource in the DHT may send a REFRESH\_PUT message to the node storing the resource, which would renew its refresh time. The new refresh time is sent within the refresh message. However, if the refresh time received is greater than the current local time, the new refresh time is given the value of the current local time. To avoid problems caused by two nodes potentially located in different time zones, the refresh time should always be converted to the UTC (Coordinated Universal Time). The REFRESH\_PUT message is routed towards the resource key, and when no next hop is found (closest node was reached), a check is made whether the resource with the specified \emph{resourceId} and \emph{resourceUrl} is present in the local storage and whether the node is one of the $k_{store}$ closest nodes to the resource key. If both conditions are met, the node updates the refresh time for the resource entry and sends a REFRESH\_PUT\_REPLY message directly to the requesting node. The REFRESH\_PUT\_REPLY contains the status of the operation. If at least one of the checks fails, a negative response is sent.
+
+This mechanism is supposed to prevent maintaining resources inserted to the DHT when they are no longer current. Nodes publishing resources in the DHT should therefore periodically refresh their validity time, and the refresh interval should be smaller than the resource expiration time.
+
+
+
+
+\section{Retrieving resources from the DHT}
+
+In order to retrieve (GET) resources from the DHT, a node sends a GET message containing the requested key and additional criteria, specifying the requested key as the message recipient. Depending on the value of the request parameter \emph{GetFromClosest}, the message is either routed to the node closest to the resource key, which searches its local storage for the resources according to the specified criteria, or the resource(s) are returned by the first node on the route that is able to return the resource(s). The returning node sends back (directly) a GET\_REPLY message containing the results, or an empty result, depending whether the resources were found or not. If \emph{GetFromClosest} equals \emph{false} (the resource is supposed to be returned by the first node on the route storing it), every node on the route (including the initiating node itself) first makes a check, whether the node is one of $k_{store}$ closest nodes to the resource key, and whether the resource requested is stored in the local storage. If both conditions are met, the result is immediately returned directly to the requesting node. Otherwise, the node tries to route the message. If, however, the message cannot be routed because no next hop is found in the routing tables (the closest node is reached), the node returns the results found locally (if any), even it is not one of the $k_{store}$ closest nodes to the resource key. This method of retrieving resources yields very good properties in terms of load balancing if the resource is replicated to multiple nodes (Section \ref{sec:replication}). When the message reaches one of the $k_{store}$ closest nodes, this node is likely to contain all published copies of the resource, while if the route is broken before one of the nodes maintaining the resource (considering itself as one of the $k_{store}$ closest nodes) is reached, this node may return only partial result or not return anything at all (resources might have been stored in that node in the past, and, in some cases, resources may be replicated to more than $k_{store}$ nodes).
+
+Every GET request, in addition to the resource key, contains additional resource search criteria (key-value pairs). The criteria key set should be a subset of the resource descriptor key set. Before returning the GET result, nodes filter out the resources, and only resources matching the criteria are returned (matching resource descriptor values for all the keys specified in the criteria).
+
+
+
+
+
+
+\section{Resource removal from the DHT}
+
+In certain applications, it would be desirable to allow nodes to remove (DELETE) resources that have been earlier inserted into the distributed hash table. \emph{HyCube} provides such a possibility. A node willing to delete a resource should send a DELETE message addressed to that node (or to the resource key, in which case the message would be routed to the node closest to the resource key), specifying the exact criteria for deletion - key-value pairs (the key set should be a subset of the resource descriptor key set: \emph{resourceId}, \emph{resourceUrl}, \ldots). The resource entry should be deleted only when all key-value pairs specified within the criteria match those of the resource entry descriptor. For instance, a node might decide to delete a resource copy published by itself, while still leaving other copies of the resource accessible. In this case, the node would specify the \emph{resourceId} and \emph{resourceUrl}, which unambiguously identifies that particular instance of the resource. Every node processing a DELETE message is supposed to send a DELETE\_REPLY message directly to the requestor, containing the status of the operation (\emph{true} is the resource was deleted, \emph{false} otherwise).
+
+When a resource is removed from one node's local storage, it may still be accessible through other nodes, and may be again inserted to the node that removed it through the replication mechanism. That is why the resource being removed should be deleted from all nodes storing the resource at the same time. It is however never guaranteed that the resource is entirely deleted from the DHT, as it is difficult to track to which nodes the resource was replicated. All resources are however assigned the expiration time (mentioned earlier), which causes resources to be deleted after certain amount of time if they are not refreshed. This mechanism is able to eventually remove outdated resources from the DHT completely.
+
+
+
+
+
+
+\section{Storage access control}
+
+By default, in \emph{HyCube}, it is possible to perform PUT, REFRESH\_PUT, GET and DELETE operations on any resource by any node. In many cases, this behavior might not be desirable. The design of \emph{HyCube} allows introducing an additional (application defined) component that would control which operations are allowed and which are not, based on the resource descriptor and the node performing the operation. For example, such a mechanism might be enabled to allow REFRESH\_PUT and DELETE operations to be performed only by the nodes that originally put the resource in the DHT. Such a check could be based for example on the \emph{resourceUrl} value. Another example could be limiting access for resources for certain nodes based on the resource metadata.
+
+
+
+
+%\section{Exact versus routed resource operations}
+\section{Routing requests vs sending requests directly to nodes}
+
+As described in the previous sections, PUT, REFRESH\_PUT, GET and DELETE messages are routed towards the resource key, and the responses are returned directly to the requesting node. However, another approach may be taken if the request should be sent to a certain exact node (known to the requesting node). In such a case, this exact node's ID should be set as the recipient of the message and the message should be sent directly to the recipient. The message would then not be routed further, even if it is not the closest node to the resource key. Specifying the exact recipient for resource operation messages allows placing resources in multiple nodes, updating the refresh time (REFRESH) for resources stored in multiple nodes, and retrieving the resources from several nodes at a time. Usually, to increase resource availability, the resource is stored in several nodes - the closest nodes to the resource key. Moreover, as already mentioned, the DELETE operation would successfully remove a resource from the DHT only if the resource is removed from all the nodes storing it. To determine the set of closest nodes, the search procedure may be performed, and the messages may then be sent directly to the nodes found. Depending on the application, other techniques may be employed - for instance, if the resource should be put to only one node (for example allocation of subtasks in a distributed computing system), a node lookup might be used to find the node closest to a certain identifier.
+
+In majority of applications, the resources are stored by multiple nodes, and the PUT operation should usually be preceded by the search locating the closest nodes, to which the resources are then inserted. However, retrieving the resources from the DHT, in most cases, may be done more efficiently, without the use of the search procedure. In the routing approach (towards the resource key), it is possible to limit the number of messages exchanged between nodes to the minimum, finding the resource with high probability in the closest node to the resource key. If additionally, the value of the option \emph{GetFromClosest} is set to \emph{false}, the check is made by all nodes on the route, increasing the probability of finding the resource requested. Furthermore, such a way of retrieving resources would provide simple, but effective load balancing - the first node containing the resource would be different depending on the path (direction from which the request comes).
+
+
+
+
+
+
+
+\section{Resource replication and load balancing}
+\label{sec:replication}
+
+It was already mentioned that, to increase availability of resources, they may me replicated to multiple nodes. In \emph{HyCube}, resources are replicated among a certain number of nodes (let us denote this number by $k_{rep}$) that are the closest ones to the resource keys ($k_{rep}$ is a system parameter). However, in dynamic systems, the set of $k_{rep}$ closest nodes may change very quickly, making resources difficult to locate. At one extreme, all nodes responsible for some resource key may leave the system, making the resources unavailable. Therefore, it is crucial that the resources get constantly replicated among $k_{rep}$ currently closest nodes. $k_{rep}$ may be larger than $k_{store}$, but in this case, some nodes may not return the replica when receiving a GET message (with the \emph{GetFromClosest} option set to \emph{false}) - instead they would route the message further towards the resource key. 
+
+The replication procedure is run periodically by all nodes. Every node sends information about all resources it maintains to all the nodes in its neighborhood set (REPLICATE messages). To keep the message sizes at reasonable levels, the resources stored for different keys should be sent in separate REPLICATE messages. The number of nodes to which the replication information is sent may be limited to a certain maximum number of nodes by setting the value of the system parameter \emph{maxReplicationNSNodesNum}, in which case the REPLICATE messages will be sent only to \emph{maxReplicationNSNodesNum} closest nodes in the neighborhood set. However, to allow resources to be replicated towards all directions in the Euclidean space, the value of this parameter should not be too low. The replication information contains only the resource descriptors (metadata) and the last resource refresh time. Upon receiving a REPLICATE message, for every replicated resource, the receiving node should check if it is one of the $k_{rep}$ closest nodes to the resource key. If the node is one of the closest nodes, for each resource corresponding to that key, the node should check if it maintains this resource in its local storage. If the resource is already stored (\emph{resourceId} and \emph{resourceUrl} are compared), the refresh time of the resource should be updated (if the refresh time for the resource in the replication message is greater than the local refresh time). If the resource is, however, not stored in the local storage, the node should perform the GET operation (GET messages routed towards the resource key, the value of \emph{GetFromClosest} flag used in replication is set by a system parameter), and, upon receiving the GET\_REPLY, insert the resource to its local storage, setting the refresh time to the one received in the REPLICATE message. However, if the refresh time received is greater than the current local time, the refresh time is set to the current time.
+
+The replication mechanism of \emph{HyCube}, in addition to increasing resource availability, also provides load balancing for most popular resources. \emph{HyCube} is designed to realize this approach by allowing an external (application-specific) module, implementing an appropriate interface, to be registered - a replication spread manager, which may analyze all PUT, REFRESH\_PUT, GET and DELETE operations and calculate the replication spread factor $\psi$ for each resource stored. Based on $\psi$, the node performing the replication calculates to how many nodes the resource should be replicated:
+
+\begin{equation}
+k_{rep} = \psi \cdot k_{rep}
+\end{equation}
+
+\noindent
+where $k_{bal}$ is the default number of replication nodes. The value of $k_{bal}$ for every resource is included in the REPLICATE messages sent to nodes. The nodes receiving replication information, accept the replicas only when they determine that they are within $k_{bal}$ closest nodes to the resource key. For more popular resources, the replication spread manager may increase the value of $\psi$, which would cause the resource to be replicated to more nodes. When combined with retrieving (getting) resources with \emph{GetFromClosest} option set to \emph{false}, such a replication mechanism provides very good load balancing - in a multidimensional space, the increase of the replication radius would cause more nodes handling GET requests coming from different directions. As already mentioned, the value of $k_{rep}$ (and thus $k_{bal}$) may be greater than the system parameter $k_{store}$. However, in this case, some nodes, although accepting the replica, would not return the resource when receiving a GET message with the \emph{GetFromClosest} option set to \emph{false}. The implementation of the replication spread manager is application-dependent and is beyond the scope of \emph{HyCube}. The default implementation returns the value $\psi = 1$ for every resource.
+
+One more remark should be made regarding replication and updating refresh times for resources. Whenever there is a time difference between any two nodes, the refresh time sent within a REPLICATE message may be inadequate when the message is received by another node. That could potentially cause the refresh time to be automatically increased just by the replication process, which is not a desired behavior. However, the new refresh time assigned to resources is always the smaller of the two values - the refresh time received and the current local time, meaning that the refresh time will never be increased by exchanging REPLICATE messages to a larger value than the current local time. The refresh time may also be increased as a result of receiving a REFRESH\_PUT message, when a larger refresh time value is specified by the refreshing node. Although there is also a possibility that the refreshing node's time is shifted (relatively to the node receiving the refresh request), the refresh time will never be set to a greater value than the receiving node's local time. Thus, the only potentially problematic situation may occur when both, the refreshing and the refreshed node have their local clocks going faster. In such a case, the refreshed node would potentially send a wrong refresh time in replicate messages (potentially far in future). However, as other nodes would then set the refresh time to their current local time value, and the replicating node (the one with the clock going faster) would stop replicating the resource after it is outdated according to its local time, the excess storing time at the whole DHT level would, at one extreme, be equal to the resource expiration time (the worst case), and the resource would then be considered outdated and removed by all other nodes.
+
+The replication mechanism employed by \emph{HyCube} is able to maintain replica availability in the presence of many node failures, as well as under high rates of churn. Although in such situations, it may happen that certain resources are replicated to more nodes than needed, this anomaly would be only temporary - the excess replicas would be removed after their expiration time (the resources stored by the excess nodes would not be refreshed).
+
+Although replicating resources is performed every certain time interval, the algorithm does not introduce much overhead, because only a small number of REPLICATE messages are exchanged, and nodes physically transfer the resources only when it is needed.
+
+
+
+
+
+
+
+
+% ex: set tabstop=4 shiftwidth=4 softtabstop=4 noexpandtab fileformat=unix filetype=tex encoding=utf-8 fileencodings= fenc= spelllang=pl,en spell:
+

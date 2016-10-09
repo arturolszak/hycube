@@ -1,0 +1,174 @@
+\pdfoutput=1
+\pdfcompresslevel=9
+\pdfinfo
+{
+    /Author (Artur Olszak)
+    /Title (HyCube library documentation)
+    /Subject (HyCube library documentation)
+    /Keywords (HyCube)
+}
+\documentclass[a4paper,onecolumn,oneside,12pt]{mwrep}
+
+\usepackage{times}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+
+
+\usepackage[toc,page]{appendix}
+
+
+\usepackage{hhline}
+
+
+\usepackage{longtable}
+
+\usepackage{tabu}
+
+\usepackage{listings}
+
+\lstdefinestyle{listing1}{
+  breaklines=true,
+  xleftmargin=\parindent,
+  showstringspaces=false,
+  basicstyle=\footnotesize\ttfamily,
+}
+
+\lstdefinestyle{listing1noindent}{
+  breaklines=true,
+  resetmargins=true,
+  showstringspaces=false,
+  basicstyle=\footnotesize\ttfamily,
+}
+
+\lstdefinestyle{listing1small}{
+  breaklines=true,
+  xleftmargin=\parindent,
+  showstringspaces=false,
+  basicstyle=\scriptsize\ttfamily,
+}
+
+\lstdefinestyle{listing1noindentsmall}{
+  breaklines=true,
+  resetmargins=true,
+  showstringspaces=false,
+  basicstyle=\scriptsize\ttfamily,
+}
+
+
+\usepackage[table]{xcolor}
+
+
+\usepackage[normalem]{ulem}
+
+
+\newcommand{\beq}{\begin{equation}}
+\newcommand{\eeq}{\end{equation}}
+\newcommand{\refbr}[1]{(\ref{#1})}
+
+
+\usepackage{graphicx}
+
+\usepackage{amsmath}
+
+\usepackage{amssymb}
+
+
+\usepackage{float}
+\restylefloat*{table}
+
+
+
+\usepackage{caption}
+\captionsetup{font=footnotesize,labelsep=space,justification=justified,singlelinecheck=false}
+
+
+
+\usepackage{multirow}
+
+
+%\usepackage{morefloats}
+
+
+
+
+%\usepackage{pgfplots}
+%\pgfplotsset{compat=newest}
+
+
+
+\hyphenpenalty=10000		% nie dziel wyrazów zbyt często
+\clubpenalty=10000			% kara za sierotki
+\widowpenalty=10000			% nie pozostawiaj wdów
+\brokenpenalty=10000		% nie dziel wyrazów między stronami
+\exhyphenpenalty=999999		% nie dziel słów z myślnikiem
+\righthyphenmin=3			% dziel minimum 3 litery
+
+\tolerance=4500
+\pretolerance=250
+\hfuzz=1.5pt
+\hbadness=1450
+
+\sloppy						% umacnia pozycję prawego marginesu
+
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-2in}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-2in}
+\setlength{\marginparwidth}{1in}
+\setlength{\oddsidemargin}{0in}
+\setlength{\evensidemargin}{0in}
+
+\linespread{1.5}
+
+\begin{document}
+
+
+\begin{titlepage}	% English title page
+	
+	\fontseries{b}
+	\fontsize{24pt}{18pt}\selectfont
+	\emph{HyCube} library documentation \\
+	
+	\fontseries{m}
+	\fontsize{16pt}{14pt}\selectfont
+	v.1.0 (rev. 1)
+	\vspace*{25\baselineskip}
+	
+	
+	\fontsize{14pt}{15pt}\selectfont
+	Author: Artur Olszak\\
+	\vspace*{1\baselineskip}
+	
+	
+	\begin{flushright}
+	\fontsize{10pt}{15pt}\selectfont
+	20.10.2014
+	\end{flushright}
+	
+\end{titlepage}
+
+
+
+
+
+\newpage
+
+\pagenumbering{arabic}
+
+\setcounter{page}{2}
+
+
+
+\tableofcontents
+
+\input{tex/library}
+
+\input{tex/simulator}
+
+
+
+\end{document}
+
+% ex: set tabstop=4 shiftwidth=4 softtabstop=4 noexpandtab fileformat=unix filetype=tex encoding=utf-8 fileencodings= fenc= spelllang=pl,en spell:
+

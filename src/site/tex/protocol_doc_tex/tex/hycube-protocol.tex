@@ -1,0 +1,1109 @@
+
+\chapter{HyCube Protocol specification}
+\label{sec:protocol}
+
+Individual algorithms used by \emph{HyCube} have been described in detail in previous chapters. However, to allow various implementations to work with each other, it is necessary to establish a formal protocol, defining the messages exchanged between nodes, their contents, as well as formatting and encoding details. This section specifies the structure of messages, message fields and their interpretations, standardized formats for data structures and conversion to binary representation.
+
+
+\section{Messages}
+
+
+The following sections present the formal definition of messages - the message header and the message contents for individual message types.
+
+
+\subsection{Message header}
+
+%\usepackage{float}
+%\restylefloat{table}
+%\begin{table}[H]
+
+%\begin{table}[h]
+
+
+Every message is composed of the message header and the message data. The header consists of the fields presented in the Table \ref{tab:protMsgHeader}. The same header structure (and thus the header length) is defined for all messages, regardless of the message type. The ``Options'' header field is a set of boolean (binary) options, listed in Table \ref{tab:protMsgHeaderOptions}.
+
+
+
+
+
+
+
+
+
+\subsection{Message types}
+\label{sec:messageTypes}
+
+\emph{HyCube} protocol defines a number of message types (presented in Table \ref{tab:protMsgTypes}). Messages of individual types are used for realization of the the techniques presented.
+
+Messages (message data) of system message types have a strictly defined structure, described in detail in this section. Application-level messages (DATA message type) have no restrictions on the data - they may contain any application-specific data structures. Additionally, it is possible to define application-level message types using the ``Extended message type'' field.
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Version}					& 2										& Protocol version					\\[1.5mm]
+	\textbf{-}							& 2										& Reserved							\\[1.5mm]
+	\textbf{Message type code}			& 2										& Message type						\\[1.5mm]
+	\textbf{Extended message type}		& 2										& Application-level extended message type									\\[1.5mm]
+	\textbf{Message length}				& 4										& Total length of the message (in bytes)									\\[1.5mm]
+	\textbf{CRC}						& 4										& Checksum (CRC-32)							\\[1.5mm]
+	\textbf{Serial number}				& 4										& Message serial number - increased after sending every message									\\[1.5mm]
+	\textbf{TTL}						& 2										& Maximum number of hops - decreased by every node on the route sending the message	(unless one of the TTL concealing techniques is used - anonymity). The initial value of TTL for messages being sent is 32.			\\[1.5mm]
+	\textbf{Hop count}					& 2										& The number of nodes that routed the message - increased by every node on the route sending the message. $2^{15}-1$ is considered the maximum value (signed). The value would not be increased any more when $2^{15}-1$ is reached (used to conceal the hop count - anonymity).			\\[1.5mm]
+	\textbf{Source \emph{HyCube} port}			& 2								& Determines the source port (application level port) from which the message is sent			\\[1.5mm]
+	\textbf{Destination \emph{HyCube} port}	& 2									& Determines the recipient port (application level port) to which the message is sent		\\[1.5mm]
+	\textbf{Sender ID}					& *										& Sender ID - node identifier \newline * The length of this field depends on the number of dimensions and hierarchy levels									\\[1.5mm]
+	\textbf{Recipient ID}				& *										& Recipient ID - node identifier \newline * The length of this field depends on the number of dimensions and hierarchy levels									\\[1.5mm]
+	\textbf{Steinhaus point ID}			& *										& Steinhaus point ID - node identifier of the current Steinhaus point\newline * The length of this field depends on the number of dimensions and hierarchy levels						\\[1.5mm]
+	\textbf{Sender network address}		& *										& Sender network level address \newline * The length of this field depends on the network protocol used.									\\[1.5mm]
+	\textbf{Route ID}					& 4										& Route ID - used for registered routes									\\[1.5mm]
+	\textbf{Options}					& 2										& Boolean (binary) message options										\\[1.5mm]
+	\textbf{Header extensions}			& *										& Additional optional header fields - a number of byte sequences (used by protocol extensions or application-specific). \newline * The length of this field depends on the application.							\\[1.5mm]	
+    \hline
+\end{tabular}
+\end{center}
+\caption{Message header}
+\label{tab:protMsgHeader}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{3cm} p{8.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}			& \textbf{Option name}				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{0}								& \textbf{PMH}						& Determines if the prefix mismatch heuristic is applied				\\[1.5mm]
+	\textbf{1}								& \textbf{Steinhaus transform}		& Determines if the Steinhaus transform is applied						\\[1.5mm]
+	\textbf{2}								& \textbf{Secure routing}			& Determines if the secure routing is applied							\\[1.5mm]
+	\textbf{3}								& \textbf{Skip random next hops}	& Determines if a random number of nodes should be skipped in the next hop selection				\\[1.5mm]
+	\textbf{4}								& \textbf{Register route}			& Determines if the route should be registered (direct sender, direct recipient, original and new route IDs should be stored by nodes along the route) 				\\[1.5mm]
+	\textbf{5}								& \textbf{Route back}				& Determines if the message should be routed back along the previously registered route				\\[1.5mm]
+	\textbf{6}								& \textbf{Anonymous route}			& Determines if the route should be anonymous (forced anonymous route). If the value is \emph{true}, every node along the route should replace the message's original sender node ID and network address with its own node ID and network address. Additionally the option forces concealing the ``TTL'' and the ``Hop count'' header fields, and modifies the initial Steinhaus point if the sending node ID is one of the most distant nodes to the recipient node ID in the hierarchical hypercube (the new value is the second best next hop found in the routing tables). This option can be set to \emph{true} together with ``Register route'' or ``Route back'' option, in which case it the message will be routed along a registered route, and additionally, concealing the ``TTL'', the ``Hop count'' and the ``Steinhaus point'' fields will be forced.			\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{Message header options}
+\label{tab:protMsgHeaderOptions}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{1.5cm} p{2cm} p{7.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Message type}					& \textbf{Type code}				& \textbf{Definition}						& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{\textit{Not set}}				& \textbf{0}						& 											& 				\\[1.5mm]
+    \textbf{\textit{EXT}}					& \textbf{-1 (0xFFFF)}				& 											& Extension/application-defined message type				\\[1.5mm]
+	\textbf{DATA}							& \textbf{1}						& App. defined								& Application-level message. Such messages are routed through the DHT to the destination node.		\\[1.5mm]
+	\textbf{DATA\_ACK}						& \textbf{2}						& Table \ref{tab:mDataAck}					& DATA message acknowledgment, notifying the sender about the delivery - sent directly to the sender of the DATA message 			\\[1.5mm]
+	\textbf{LOOKUP}							& \textbf{3}						& Table \ref{tab:mLookup}					& Lookup request, containing the lookup parameters				\\[1.5mm]
+	\textbf{LOOKUP\_REPLY}					& \textbf{4}						& Table \ref{tab:mLookupReply}				& Lookup response containing local lookup results requested by a LOOKUP message			\\[1.5mm]
+	\textbf{SEARCH}							& \textbf{5}						& Table \ref{tab:mSearch}					& Search request, containing the search parameters				\\[1.5mm]
+	\textbf{SEARCH\_REPLY}					& \textbf{6}						& Table \ref{tab:mSearchReply}				& Search response containing local search results requested by a SEARCH message			\\[1.5mm]
+	\textbf{JOIN}							& \textbf{7}						& Table \ref{tab:mRouteJoin}, \ref{tab:mSearchJoin}					& Join request send by a joining node to a node already connected to the DHT system			\\[1.5mm]
+	\textbf{JOIN\_REPLY}					& \textbf{8}						& Table \ref{tab:mRouteJoinReply}, \ref{tab:mSearchJoinReply}		& Join reply sent back to a joining node as a response to a join request				\\[1.5mm]
+	\textbf{LEAVE}							& \textbf{9}						& Table \ref{tab:mLeave}					& A message sent to neighbors by a leaving node					\\[1.5mm]
+	\textbf{RECOVERY}						& \textbf{10}						& Table \ref{tab:mRecovery}					& Recovery request message, requesting a node to return its routing table references	\\[1.5mm]
+	\textbf{RECOVERY\_REPLY}				& \textbf{11}						& Table \ref{tab:mRecoveryReply}			& Recovery reply message, sent to a requesting node as a response to a RECOVERY message, containing requested node's routing table references		\\[1.5mm]
+	\textbf{NOTIFY}							& \textbf{12}						& No data \newline (only header)			& A notification message sent to nodes to inform about the existence of the sending node (used in the recovery process)		\\[1.5mm]
+	\textbf{PING}							& \textbf{13}						& No data \newline (only header)			& Keep-alive message sent to verify whether a node is alive and responsive			\\[1.5mm]
+	\textbf{PONG}							& \textbf{14}						& Table \ref{tab:mPong}						& Keep-alive response, sent back to a node that sent a PING message					\\[1.5mm]
+	\textbf{PUT}							& \textbf{15}						& Table \ref{tab:mPut}						& Put request message (PUT operation) containing the resource descriptor and resource data to be stored				\\[1.5mm]
+	\textbf{PUT\_REPLY}						& \textbf{16}						& Table \ref{tab:mPutReply}					& Put response, containing the status of the PUT operation				\\[1.5mm]
+	\textbf{GET}							& \textbf{17}						& Table \ref{tab:mGet}						& Get request (GET operation), specifying the parameters and criteria 				\\[1.5mm]
+	\textbf{GET\_REPLY}						& \textbf{18}						& Table \ref{tab:mGetReply}					& Get response, containing the resources requested by a GET message			\\[1.5mm]
+	\textbf{DELETE}							& \textbf{19}						& Table \ref{tab:mDelete}					& Delete request (DELETE operation), specifying the criteria				\\[1.5mm]
+	\textbf{DELETE\_REPLY}					& \textbf{20}						& Table \ref{tab:mDeleteReply}				& Delete response, containing the status of the DELETE operation			\\[1.5mm]
+	\textbf{REFRESH\_PUT}					& \textbf{21}						& Table \ref{tab:mRefreshPut}				& Refresh put request - a request to refresh the resource validity time		\\[1.5mm]
+	\textbf{REFRESH\_PUT\_REPLY}			& \textbf{22}						& Table \ref{tab:mRefreshPutReply}			& Refresh put response - the status of the REFRESH\_PUT operation				\\[1.5mm]
+	\textbf{REPLICATE}						& \textbf{23}						& Table \ref{tab:mReplicate}				& Replicate message, notifying nodes about resources stored by nodes, containing the resource descriptors			\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{Message types}
+\label{tab:protMsgTypes}
+\end{table}
+
+
+
+
+%%% Message definitions
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Ack serial number}					& 4										& Serial number of the received (confirmed) message					\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{DATA\_ACK message}
+\label{tab:mDataAck}
+\end{table}
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Lookup ID}					& 4										& Lookup request identifier (integer value) - lookup responses should refer to lookup requests using that identifier					\\[1.5mm]
+	\textbf{Lookup node ID}				& *										& Lookup node ID - the key/identifier, to which the closest node is being searched for \newline * The length of this field depends on the number of dimensions and hierarchy levels					\\[1.5mm]
+	\textbf{Options}					& 4										& A set of boolean lookup options (Table \ref{tab:mLookupOptions})				\\[1.5mm]
+	\textbf{Steinhaus point ID} \newline [optional]		& *						& Steinhaus point ID (for this lookup request). This field is not present if the value of the option ``Steinhaus transform'' is false \newline * The length of this field depends on the number of dimensions and hierarchy levels					\\[1.5mm]	
+	\textbf{Beta}						& 2										& Parameter $\beta$ for this lookup request				\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{LOOKUP message}
+\label{tab:mLookup}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{2.7cm} p{3.3cm} p{8.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}					& \textbf{Option name}				& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{0}								& \textbf{Steinhaus transform}			& Determines if the Steinhaus transform is applied						\\[1.5mm]
+    \textbf{1}								& \textbf{PMH}							& Determines if the prefix mismatch heuristic is applied				\\[1.5mm]
+	\textbf{2}								& \textbf{Prevent PMH}					& If set to true, the prefix mismatch heuristic should not be applied in the next hop selection			\\[1.5mm]
+	\textbf{3}								& \textbf{Include more distant nodes}	& If set to true, the next hop selection may return also more distant nodes than the current node		\\[1.5mm]
+	\textbf{4}								& \textbf{Skip target node}				& If set to true, the next hop selection should skip the exact match (the node with the ID equal to the key being searched for)			\\[1.5mm]
+	\textbf{5}								& \textbf{Skip nodes}					& Determines if a random number of nodes should be skipped in the next hop selection					\\[1.5mm]
+	\textbf{6}								& \textbf{Secure routing}				& Determines if the secure next hop selection (secure routing tables) is applied							\\[1.5mm]
+	\textbf{7}								& \textbf{Final lookup}					& Determines if the lookup is in the second (final) phase				\\[1.5mm]	
+    \hline
+\end{tabular}
+\end{center}
+\caption{LOOKUP message options}
+\label{tab:mLookupOptions}
+\end{table}
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3.3cm} p{1.7cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Lookup ID}					& 4										& Lookup request identifier (integer value) - lookup responses should refer to lookup requests using that identifier					\\[1.5mm]
+	\textbf{Options}					& 4										& A set of boolean lookup options (Table \ref{tab:mLookupReplyOptions})				\\[1.5mm]
+	\textbf{Steinhaus point ID} \newline [optional]		& *						& Steinhaus point ID (used for this lookup request). This field is not present if the value of the option ``Steinhaus transform'' is false \newline * The length of this field depends on the number of dimensions and hierarchy levels					\\[1.5mm]	
+	\textbf{Beta}						& 2										& Parameter $\beta$ for this lookup request					\\[1.5mm]
+	\textbf{Number of results}			& 2										& The number of nodes returned in the lookup response		\\[1.5mm]
+	\textbf{Results} \newline (Network address, Node ID)*			& *			& The results of the lookup requests - next hops found. The network address and the node ID, repeated for every reference returned. \newline * The length of this field depends on the number of dimensions and hierarchy levels, and on the network address length		\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{LOOKUP\_REPLY message}
+\label{tab:mLookupReply}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{2.7cm} p{3.3cm} p{8.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}			& \textbf{Option name}					& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{0}								& \textbf{Steinhaus transform}			& Determines if the Steinhaus transform was applied	in the next hop selection (local lookup)			\\[1.5mm]
+    \textbf{1}								& \textbf{PMH}							& Determines if the prefix mismatch heuristic was applied during the next hop selection					\\[1.5mm]
+	\textbf{2}								& \textbf{Prevent PMH}					& If set to true, the prefix mismatch heuristic was prevented in the next hop selection					\\[1.5mm]
+	\textbf{3}								& \textbf{Include more distant nodes}	& If set to true, the next response may may contain also more distant nodes than the current node		\\[1.5mm]
+	\textbf{4}								& \textbf{Skip target node}				& If set to true, the local lookup ignored the potential exact match (the node with the ID equal to the key being searched for)		\\[1.5mm]
+	\textbf{5}								& \textbf{Skip nodes}					& Determines if a random number of nodes were skipped in the next hop selection							\\[1.5mm]
+	\textbf{6}								& \textbf{Secure lookup}				& Determines if the secure lookup (secure routing tables used) was applied								\\[1.5mm]
+	\textbf{7}								& \textbf{Final lookup}					& Determines if the lookup is in the second (final) phase												\\[1.5mm]	
+    \hline
+\end{tabular}
+\end{center}
+\caption{LOOKUP\_REPLY message options}
+\label{tab:mLookupReplyOptions}
+\end{table}
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Search ID}					& 4										& Search request identifier (integer value) - search responses should refer to search requests using that identifier					\\[1.5mm]
+	\textbf{Search node ID}				& *										& Search node ID - the key/identifier, to which the closest nodes are being searched for \newline * The length of this field depends on the number of dimensions and hierarchy levels					\\[1.5mm]
+	\textbf{Options}					& 4										& A set of boolean search options (Table \ref{tab:mSearchOptions})				\\[1.5mm]
+	\textbf{Steinhaus point ID} \newline [optional]		& *						& Steinhaus point ID (for this search request). This field is not present if the value of the option ``Steinhaus transform'' is false \newline * The length of this field depends on the number of dimensions and hierarchy levels					\\[1.5mm]	
+	\textbf{Beta}						& 2										& Parameter $\beta$ for this search request				\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{SEARCH message}
+\label{tab:mSearch}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{2.7cm} p{3.3cm} p{8.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}					& \textbf{Option name}				& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{0}								& \textbf{Steinhaus transform}			& Determines if the Steinhaus transform is applied						\\[1.5mm]
+    \textbf{1}								& \textbf{PMH}							& Determines if the prefix mismatch heuristic is applied				\\[1.5mm]
+	\textbf{2}								& \textbf{Prevent PMH}					& If set to true, the prefix mismatch heuristic should not be applied in the next hop selection			\\[1.5mm]
+	\textbf{3}								& \textbf{Include more distant nodes}	& If set to true, the next hop selection may return also more distant nodes than the current node		\\[1.5mm]
+	\textbf{4}								& \textbf{Skip target node}				& If set to true, the next hop selection should skip the exact match (the node with the ID equal to the key being searched for)			\\[1.5mm]
+	\textbf{5}								& \textbf{Skip nodes}					& Determines if a random number of nodes should be skipped in the next hop selection					\\[1.5mm]
+	\textbf{6}								& \textbf{Secure routing}				& Determines if the secure next hop selection (secure routing tables) is applied							\\[1.5mm]
+	\textbf{7}								& \textbf{Final search}					& Determines if the search is in the second (final) phase				\\[1.5mm]	
+    \hline
+\end{tabular}
+\end{center}
+\caption{SEARCH message options}
+\label{tab:mSearchOptions}
+\end{table}
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3.3cm} p{1.7cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Search ID}					& 4										& Search request identifier (integer value) - search responses should refer to search requests using that identifier					\\[1.5mm]
+	\textbf{Options}					& 4										& A set of boolean search options (Table \ref{tab:mSearchReplyOptions})				\\[1.5mm]
+	\textbf{Steinhaus point ID} \newline [optional]		& *						& Steinhaus point ID (used for this search request). This field is not present if the value of the option ``Steinhaus transform'' is false \newline * The length of this field depends on the number of dimensions and hierarchy levels					\\[1.5mm]	
+	\textbf{Beta}						& 2										& Parameter $\beta$ for this search request					\\[1.5mm]
+	\textbf{Number of results}			& 2										& The number of nodes returned in the search response		\\[1.5mm]
+	\textbf{Results} \newline (Network address, Node ID)*			& *			& The results of the search requests - next hops found. The network address and the node ID, repeated for every reference returned. \newline * The length of this field depends on the number of dimensions and hierarchy levels, and on the network address length		\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{SEARCH\_REPLY message}
+\label{tab:mSearchReply}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{2.7cm} p{3.3cm} p{8.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}			& \textbf{Option name}					& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{0}								& \textbf{Steinhaus transform}			& Determines if the Steinhaus transform was applied	in the next hop selection (local search)					\\[1.5mm]
+    \textbf{1}								& \textbf{PMH}							& Determines if the prefix mismatch heuristic was applied during the next hop selection							\\[1.5mm]
+	\textbf{2}								& \textbf{Prevent PMH}					& If set to true, the prefix mismatch heuristic was prevented in the next hop selection							\\[1.5mm]
+	\textbf{3}								& \textbf{Include more distant nodes}	& If set to true, the result may may contain also more distant nodes than the current node						\\[1.5mm]
+	\textbf{4}								& \textbf{Skip target node}				& If set to true, the local search ignored the potential exact match  (the node with the ID equal to the key being searched for)			\\[1.5mm]
+	\textbf{5}								& \textbf{Skip nodes}					& Determines if a random number of nodes were skipped in the next hop selection									\\[1.5mm]
+	\textbf{6}								& \textbf{Secure search}				& Determines if the secure search (secure routing tables used) was applied											\\[1.5mm]
+	\textbf{7}								& \textbf{Final search}					& Determines if the search is in the second (final) phase														\\[1.5mm]	
+    \hline
+\end{tabular}
+\end{center}
+\caption{SEARCH\_REPLY message options}
+\label{tab:mSearchReplyOptions}
+\end{table}
+
+
+
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Join ID}					& 4										& Join request identifier (integer value) - join responses should refer to join requests using that identifier					\\[1.5mm]
+	\textbf{Join node ID}				& *										& The ID of the joining node \newline * The length of this field depends on the number of dimensions and hierarchy levels					\\[1.5mm]	
+	\textbf{Options}					& 4										& A set of boolean search options (Table \ref{tab:mRouteJoinOptions})				\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{JOIN message (route JOIN)}
+\label{tab:mRouteJoin}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{3cm} p{8.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}			& \textbf{Option name}					& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{0}								& \textbf{Discover public address}		& Determines if the requested node should return the connecting node's public network address						\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{JOIN message options (route JOIN)}
+\label{tab:mRouteJoinOptions}
+\end{table}
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3.3cm} p{1.7cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Join ID}					& 4										& Join request identifier (integer value) - join responses should refer to join requests using that identifier					\\[1.5mm]
+	\textbf{Options}					& 4										& A set of boolean search options (Table \ref{tab:mRouteJoinReplyOptions})				\\[1.5mm]
+	\textbf{Requestor network address}	\newline [Optional]		& *				& Public network address of the connecting node. The field is not present if the value of the option ``Discover public address'' is false. \newline * The length of this field depends on the underlying network protocol 					\\[1.5mm]
+	\textbf{Number of nodes returned}	& 4										& The number of nodes returned in the join response					\\[1.5mm]
+	\textbf{Nodes} \newline (Network address, Node ID)*			& *				& The nodes returned in the join response. The network address and the node ID, repeated for every reference returned. \newline * The length of this field depends on the number of dimensions and hierarchy levels, and on the network address length		\\[1.5mm]	
+    \hline
+\end{tabular}
+\end{center}
+\caption{JOIN\_REPLY message (route JOIN)}
+\label{tab:mRouteJoinReply}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{3cm} p{8.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}			& \textbf{Option name}					& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{0}								& \textbf{Final reply}					& Determines if the join reply is final (the JOIN message was not routed any further - no next hop found)			\\[1.5mm]
+	\textbf{1}								& \textbf{Discover public address}		& Determines if the connecting node's public network address is returned						\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{JOIN\_REPLY message options (route JOIN)}
+\label{tab:mRouteJoinReplyOptions}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Join ID}					& 4										& Join request identifier (integer value) - join responses should refer to join requests using that identifier					\\[1.5mm]
+	\textbf{Join node ID}				& *										& The ID of the joining node \newline * The length of this field depends on the number of dimensions and hierarchy levels					\\[1.5mm]	
+	\textbf{Options}					& 4										& A set of boolean search options (Table \ref{tab:mSearchJoinOptions})				\\[1.5mm]
+	\textbf{Steinhaus point ID} \newline [optional]		& *						& Steinhaus point ID (for this search join request). This field is not present if the value of the option ``Steinhaus transform'' is false \newline * The length of this field depends on the number of dimensions and hierarchy levels					\\[1.5mm]	
+	\textbf{Beta}						& 2										& Parameter $\beta$ for this search join request				\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{JOIN message (search JOIN)}
+\label{tab:mSearchJoin}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{2.7cm} p{3.3cm} p{8.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}			& \textbf{Option name}					& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{0}								& \textbf{Steinhaus transform}			& Determines if the Steinhaus transform is applied						\\[1.5mm]
+	\textbf{1}								& \textbf{Steinhaus point set}			& Determines if the Steinhaus transform is specified in the message	(for search join, the Steinhaus point may not be specified even if the Steinhaus transform should be applied)					\\[1.5mm]
+    \textbf{2}								& \textbf{PMH}							& Determines if the prefix mismatch heuristic is applied				\\[1.5mm]
+	\textbf{3}								& \textbf{Prevent PMH}					& If set to true, the prefix mismatch heuristic should not be applied in the next hop selection			\\[1.5mm]
+	\textbf{4}								& \textbf{Include more distant nodes}	& If set to true, the next hop selection may return also more distant nodes than the current node		\\[1.5mm]
+	\textbf{5}								& \textbf{Skip target node}				& If set to true, the next hop selection should skip the exact match (the node with the ID equal to the key being searched for)			\\[1.5mm]
+	\textbf{6}								& \textbf{Skip nodes}					& Determines if a random number of nodes should be skipped in the next hop selection					\\[1.5mm]
+	\textbf{7}								& \textbf{Secure routing}				& Determines if the secure next hop selection (secure routing tables) is applied						\\[1.5mm]
+	\textbf{8}								& \textbf{Initial request}				& Determines if the join request is an initial JOIN request				\\[1.5mm]	
+	\textbf{9}								& \textbf{Final search}					& Determines if the search join is in the final phase					\\[1.5mm]	
+	\textbf{10}								& \textbf{Discover public address}		& Determines if the requested node should return the connecting node's public network address			\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{JOIN message options (search JOIN)}
+\label{tab:mSearchJoinOptions}
+\end{table}
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3.3cm} p{1.7cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Join ID}					& 4										& Join request identifier (integer value) - join responses should refer to join requests using that identifier					\\[1.5mm]
+	\textbf{Options}					& 4										& A set of boolean search options (Table \ref{tab:mSearchJoinReplyOptions})				\\[1.5mm]
+	\textbf{Requestor network address}	\newline [Optional]		& *				& Public network address of the connecting node. The field is not present if the value of the option ``Discover public address'' is false. \newline * The length of this field depends on the underlying network protocol 					\\[1.5mm]
+	\textbf{Steinhaus point ID} \newline [optional]		& *						& Steinhaus point ID (used for this search join request). This field is not present if the value of the option ``Steinhaus transform'' is false \newline * The length of this field depends on the number of dimensions and hierarchy levels					\\[1.5mm]	
+	\textbf{Beta}						& 2										& Parameter $\beta$ used for this search request					\\[1.5mm]	
+	\textbf{Number of nodes returned}	& 4										& The number of nodes returned in the join response					\\[1.5mm]
+	\textbf{Nodes} \newline (Network address, Node ID)*			& *				& The nodes returned in the join response. The network address and the node ID, repeated for every reference returned. \newline * The length of this field depends on the number of dimensions and hierarchy levels, and on the network address length		\\[1.5mm]	
+    \hline
+\end{tabular}
+\end{center}
+\caption{JOIN\_REPLY message (search JOIN)}
+\label{tab:mSearchJoinReply}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{2.7cm} p{3.3cm} p{8.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}			& \textbf{Option name}					& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{0}								& \textbf{Steinhaus transform}			& Determines if the Steinhaus transform was applied	in the local next hop selection				\\[1.5mm]
+	\textbf{1}								& \textbf{Steinhaus point set}			& Determines if the Steinhaus transform is specified in the message	(for search join, the Steinhaus point might not be specified even if the Steinhaus transform should be applied)					\\[1.5mm]
+    \textbf{2}								& \textbf{PMH}							& Determines if the prefix mismatch heuristic was applied in the next hop selection				\\[1.5mm]
+	\textbf{3}								& \textbf{Prevent PMH}					& If true, the prefix mismatch heuristic was prevented in the next hop selection			\\[1.5mm]
+	\textbf{4}								& \textbf{Include more distant nodes}	& If true, the result may contain also more distant nodes than the current node			\\[1.5mm]
+	\textbf{5}								& \textbf{Skip target node}				& If true, the local search ignored the potential exact match (the node with the ID equal to the key being searched for)			\\[1.5mm]
+	\textbf{6}								& \textbf{Skip nodes}					& Determines if a random number of nodes were skipped in the next hop selection					\\[1.5mm]
+	\textbf{7}								& \textbf{Secure search}				& Determines if the secure search (secure routing tables used) was applied						\\[1.5mm]
+	\textbf{8}								& \textbf{Initial request}				& Determines if the join request was an initial JOIN request									\\[1.5mm]	
+	\textbf{9}								& \textbf{Final search}					& Determines if the search join is in the final phase											\\[1.5mm]	
+	\textbf{10}								& \textbf{Discover public address}		& Determines if the connecting node's public network address is returned						\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{JOIN\_REPLY message options (search JOIN)}
+\label{tab:mSearchJoinReplyOptions}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{Number of neighbors}	& 4											& The number of nodes sent within the LEAVE message					\\[1.5mm]
+	\textbf{Neighbors} \newline (Network address, Node ID)*			& *			& The nodes information sent within the LEAVE message. The network address and the node ID, repeated for every reference sent. \newline * The length of this field depends on the number of dimensions and hierarchy levels, and on the network address length		\\[1.5mm]	
+    \hline
+\end{tabular}
+\end{center}
+\caption{LEAVE message}
+\label{tab:mLeave}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{Options}					& 4										& A set of boolean recovery options (Table \ref{tab:mRecoveryOptions})				\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{RECOVERY message}
+\label{tab:mRecovery}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{2.8cm} p{2.2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}			& \textbf{Option name}					& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{0}								& \textbf{Return NS}					& Determines whether the neighborhood set node references should be returned						\\[1.5mm]
+	\textbf{1}								& \textbf{Return RT1}					& Determines whether the primary routing table node references should be returned					\\[1.5mm]
+	\textbf{2}								& \textbf{Return RT2}					& Determines whether the secondary routing table node references should be returned					\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{RECOVERY message options}
+\label{tab:mRecoveryOptions}
+\end{table}
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3.3cm} p{1.7cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{Number of nodes returned}	& 4											& The number of nodes returned within the RECOVERY\_REPLY message					\\[1.5mm]
+	\textbf{Nodes returned} \newline (Network address, Node ID)*			& *			& The nodes information sent within the RECOVERY\_REPLY message. The network address and the node ID, repeated for every reference sent. \newline * The length of this field depends on the number of dimensions and hierarchy levels, and on the network address length		\\[1.5mm]	
+    \hline
+\end{tabular}
+\end{center}
+\caption{RECOVERY\_REPLY message}
+\label{tab:mRecoveryReply}
+\end{table}
+
+
+
+
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{PING serial number}			& 4										& The serial number of the PING message					\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{PONG message}
+\label{tab:mPong}
+\end{table}
+
+
+
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Command ID}					& 4										& Put request identifier (integer value) - put responses should refer to put requests using that identifier					\\[1.5mm]
+	\textbf{Key length}					& 2										& Byte length of the resource key					\\[1.5mm]
+	\textbf{Descriptor length}			& 2										& Byte length of the resource descriptor string		\\[1.5mm]
+	\textbf{Data length}				& 4										& Data length										\\[1.5mm]
+	\textbf{Resource key}				& *										& Resource key \newline * The byte length of the resource key is specified by the ``Key length'' field										\\[1.5mm]
+	\textbf{Resource descriptor}		& *										& Resource descriptor string \newline * The byte length of the res. descriptor is specified by the ``Descriptor length'' field			\\[1.5mm]
+	\textbf{Resource data}				& *										& Resource data \newline * The length of the data field is specified by the ``Data length'' field											\\[1.5mm]
+	\textbf{Refresh time}				& 8										& Resource refresh time								\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{PUT message}
+\label{tab:mPut}
+\end{table}
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{Command ID}					& 4										& Put request identifier (integer value) - put responses should refer to put requests using that identifier					\\[1.5mm]
+    \textbf{Options}					& 4										& A set of boolean PUT\_REPLY options (Table \ref{tab:mPutReplyOptions})					\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{PUT\_REPLY message}
+\label{tab:mPutReply}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{3cm} p{8.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}			& \textbf{Option name}					& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{0}								& \textbf{Status}						& The status of the PUT operation (true if the resource was successfully stored, false otherwise)						\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{PUT\_REPLY message options}
+\label{tab:mPutReplyOptions}
+\end{table}
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Command ID}					& 4										& Get request identifier (integer value) - get responses should refer to get requests using that identifier					\\[1.5mm]
+	\textbf{Options}					& 4										& A set of boolean get options (Table \ref{tab:mGetOptions})					\\[1.5mm]	
+	\textbf{Key length}					& 2										& Byte length of the resource key					\\[1.5mm]
+	\textbf{Criteria length}			& 2										& Byte length of the criteria (resource descriptor) string		\\[1.5mm]
+	\textbf{Resource key}				& *										& Resource key \newline * The byte length of the resource key is specified by the ``Key length'' field										\\[1.5mm]
+	\textbf{Criteria}					& *										& Criteria (resource descriptor) string \newline * The byte length of the criteria is specified by the ``Descriptor length'' field			\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{GET message}
+\label{tab:mGet}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{2.7cm} p{2.3cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}			& \textbf{Option name}					& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{0}								& \textbf{Get from closest}				& Specifies whether the resource should be returned by the first node storing it (\emph{false}), or the message should be routed to the closest node to the resource key (\emph{true})				\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{GET message options}
+\label{tab:mGetOptions}
+\end{table}
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{Command ID}					& 4										& Get request identifier (integer value) - get responses should refer to get requests using that identifier					\\[1.5mm]
+	\textbf{Number of resources}		& 4										& The number of resources returned				\\[1.5mm]
+	\textbf{Resources}					& *										& The resources returned. For every resource returned: \newline - resource descriptor byte length (2 bytes) \newline - resource data length (4 bytes) \newline - resource descriptor \newline - resource data			\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{GET\_REPLY message}
+\label{tab:mGetReply}
+\end{table}
+
+
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Command ID}					& 4										& Delete request identifier (integer value) - delete responses should refer to delete requests using that identifier					\\[1.5mm]
+	\textbf{Key length}					& 2										& Byte length of the resource key					\\[1.5mm]
+	\textbf{Criteria length}			& 2										& Byte length of the criteria (resource descriptor) string		\\[1.5mm]
+	\textbf{Resource key}				& *										& Resource key \newline * The byte length of the resource key is specified by the ``Key length'' field										\\[1.5mm]
+	\textbf{Criteria}					& *										& Criteria (resource descriptor) string \newline * The byte length of the criteria is specified by the ``Descriptor length'' field			\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{DELETE message}
+\label{tab:mDelete}
+\end{table}
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{Command ID}					& 4										& Delete request identifier (integer value) - delete responses should refer to delete requests using that identifier					\\[1.5mm]
+    \textbf{Options}					& 4										& A set of boolean DELETE\_REPLY options (Table \ref{tab:mDeleteReplyOptions})					\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{DELETE\_REPLY message}
+\label{tab:mDeleteReply}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}			& \textbf{Option name}					& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{0}								& \textbf{Status}						& The status of the DELETE operation (true if the resource was successfully deleted, false otherwise)						\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{DELETE\_REPLY message options}
+\label{tab:mDeleteReplyOptions}
+\end{table}
+
+
+
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+    \textbf{Command ID}					& 4										& Refresh put request identifier (integer value) - refresh put responses should refer to refresh put requests using that identifier		\\[1.5mm]
+	\textbf{Key length}					& 2										& Byte length of the resource key					\\[1.5mm]
+	\textbf{Descriptor length}			& 2										& Byte length of the resource descriptor string		\\[1.5mm]
+	\textbf{Resource key}				& *										& Resource key \newline * The byte length of the resource key is specified by the ``Key length'' field										\\[1.5mm]
+	\textbf{Resource descriptor}		& *										& Resource descriptor string \newline * The byte length of the res. descriptor is specified by the ``Descriptor length'' field			\\[1.5mm]
+	\textbf{Refresh time}				& 8										& Resource refresh time								\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{REFRESH\_PUT message}
+\label{tab:mRefreshPut}
+\end{table}
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{Command ID}					& 4										& Refresh put request identifier (integer value) - refresh put responses should refer to refresh put requests using that identifier		\\[1.5mm]
+    \textbf{Options}					& 4										& A set of boolean REFRESH\_PUT\_REPLY options (Table \ref{tab:mRefreshPutReplyOptions})					\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{REFRESH\_PUT\_REPLY message}
+\label{tab:mRefreshPutReply}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Option (bit) number}			& \textbf{Option name}					& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{0}								& \textbf{Status}						& The status of the REFRESH\_PUT operation (true if the resource was successfully refreshed, false otherwise)						\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{REFRESH\_PUT\_REPLY message options}
+\label{tab:mRefreshPutReplyOptions}
+\end{table}
+
+
+
+
+
+
+
+
+
+\begin{table}[H]
+\scriptsize
+\begin{center}
+\begin{tabular}{p{3cm} p{2cm} p{9.5cm}}
+%    \hhline{*{1}{|~}*{6}{|-}|~|}
+	\hline
+	\textbf{Field}						& \textbf{Length} [bytes]				& \textbf{Description}				\\[1mm]
+    \hline
+	\textbf{Number of resources}		& 4										& The number of replicated resources				\\[1.5mm]
+	\textbf{Resources}					& *										& The replicated resources. For every resource: \newline - resource key byte length (2 bytes) \newline - resource descriptor byte length (2 bytes) \newline - resource key \newline - resource descriptor \newline - refresh time (8 bytes) \newline - replication spread nodes number (4 bytes)			\\[1.5mm]
+    \hline
+\end{tabular}
+\end{center}
+\caption{REPLICATE message}
+\label{tab:mReplicate}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Time}
+
+To standardize the time format and interpretation, the time values exchanged by nodes are 8-byte integer numbers (64 bits). The time is expected to be the difference, measured in milliseconds, between the current time and midnight, January 1, 1970 UTC (Coordinated Universal Time). Conversion of the local time to the UTC time is essential to avoid problems caused by two nodes potentially located in different time zones.
+
+
+
+\subsection{Data structures and binary conversion}
+
+There are several data structures that are exchanged between nodes in many situations. This section standardizes these data structures and their binary representations.
+
+
+
+\subsubsection{Endianness}
+
+The byte order assumed for all data structures (numbers, as well as complex data structures) is the big-endian byte order (also called the network byte order), which means that the bytes of multi-byte values are ordered from the most significant to the least significant.
+
+
+
+\subsubsection{Integer numbers}
+
+The integer numbers exchanged in messages are supposed to be signed two's complement numbers - 2, 4 or 8 bytes long (big-endian byte order).
+
+
+
+\subsubsection{Node identifiers}
+
+A node identifier in \emph{HyCube} is a $n$-bit digit, where $n = 2^d \cdot l$, $d$ is the number of dimensions, and $l$ is the number of hierarchy levels of the hierarchical hypercube. Considering the first group of $d$ bits (index 0) as the address of the hypercube at the highest level, the binary representation of a node identifier is defined in the listing below (Java code):
+
+\begin{lstlisting}[style=listing1noindentsmall]
+if (D <= 4) {
+    int digitsInByte = 8 / D;
+    int tempByte = 0;
+    int index = 0;
+    for (int i = 0; i < L; i++) {
+        tempByte = (byte) (tempByte | ((byte)digits[i] 
+            << D * (digitsInByte - 1 - (i % digitsInByte))));
+        if ((i % digitsInByte == digitsInByte - 1) || (i == L - 1)) {
+            b[index] = tempByte;
+            index++;
+            tempByte = 0;
+        }
+    }
+}
+else {
+    int bytesPerDigit = (D + 7) / 8;
+    int index = 0;
+    for (int i = 0; i < L; i++) {
+        for (int j = 0; bytesPerDigit; j++) {
+            b[index] = (byte) (digits[i] >> (8 * j));
+            index++;
+        }
+    }
+}
+\end{lstlisting}
+
+\noindent
+where \emph{digits} is an array storing the address digits (addresses of hypercubes at individual levels), \emph{D} is the number of dimensions, and \emph{L} is the number of levels of the hierarchical hypercube. The resulting byte array \emph{b} is the binary representation of the node ID. Thus, the byte length of the node ID (binary representation defined above) equals:
+
+%\begin{lstlisting}[style=listing1noindentsmall]
+%if (D <= 4)
+%    return (L + 8 / D - 1) / (8 / D);
+%else
+%    return L * ((D + 7) / 8);
+%\end{lstlisting}
+
+$$
+	l_{\text{ID}} = \begin{cases}
+%	\begin{cases}
+		\biggl\lfloor\frac{L + \left\lfloor\frac{8}{D}\right\rfloor - 1}{\left\lfloor\frac{8}{D}\right\rfloor}\biggr\rfloor, 		& \text{if}\ D \leq 4\\
+		L \cdot  \Bigl\lfloor\frac{D + 7}{8}\Bigr\rfloor, 																			& \text{otherwise}
+	\end{cases}
+$$
+
+
+
+\subsubsection{Resource keys}
+
+The resource keys in \emph{HyCube} are multi-byte integer numbers. The bit-length of a key is equal to the length (number of bits) of the node ID. However, the binary conversion of keys differs from the binary representation of the node identifiers. The byte array representing a key is in the big-endian byte order: the most significant byte is in the zeroth element. The array contains the minimum number of bytes required to represent the integer number (key), including at least one sign bit. The number of bytes equals:
+
+$$
+%l_{\text{key}} = \lceil (bitLength + 1) / 8 \rceil = \left\lceil ( \lceil \log_2{|key|} \rceil + 1 ) / 8 \right\rceil%
+l_{\text{key}} = \biggl\lceil \frac{bitLength + 1}{8} \biggr\rceil = \Biggl\lceil \frac{\bigl\lceil \log_2{|key|} \bigr\rceil + 1}{8} \Biggr\rceil
+$$
+ 
+
+
+
+
+
+\subsubsection{Resource descriptors}
+
+The resource descriptor (defining resource metadata or criteria for resource retrieval) is defined as a string of characters being a concatenation of the following strings for all key-value pairs:
+
+\begin{lstlisting}[style=listing1noindent]
+<key=value>
+\end{lstlisting}
+
+\noindent
+for example:
+
+\begin{lstlisting}[style=listing1noindent]
+<key0=value0><key1=value1><key2=value2>...<keyN=valueN>
+\end{lstlisting}
+
+\noindent
+To obtain binary representation (used within messages), the string should be encoded in UTF-8.
+
+
+
+
+
+
+\subsection{Detection of duplicates}
+
+\emph{HyCube} may be configured to detect message duplicates and prevent processing the same message twice (DATA messages). A message is considered a duplicate, if, within a certain time interval, another message was received, having the same values of the following header fields:
+
+\begin{itemize}
+	\renewcommand{\labelitemi}{$\bullet$}
+	\item Sender ID
+	\item Serial number
+	\item Route ID
+	\item CRC (optionally)
+\end{itemize}
+
+A possibility of disabling duplicate detection for anonymous messages should be provided (``Anonymous route'' message header option) - every node routing an anonymous message updates the original message sender, which may cause messages sent by different nodes to be detected as duplicates.
+
+
+
+
+\section{Network protocol}
+
+
+\subsection{Network addresses}
+
+\emph{HyCube} may be used with various underlying network (transport) protocols. Although the algorithms used in \emph{HyCube} are independent of the underlying network protocol, various messages (and also the message header) contain the network addresses of nodes. The network address format, as well as its binary representation are network protocol specific, however, the same convention should be followed by all nodes (all implementations).
+
+The default transport protocol is UDP/IP. The address format for UDP/IP used in \emph{HyCube} should follow the convention:
+
+\begin{lstlisting}[style=listing1noindent]
+IP_ADDRESS:PORT
+\end{lstlisting}
+
+\noindent
+for example:
+
+\begin{lstlisting}[style=listing1noindent]
+192.168.1.150:10000
+\end{lstlisting}
+
+\noindent
+Binary representation of the UDP/IP (IP v.4) address (used within messages) is the concatenation of the binary representation of the IP address (4 bytes) and the port (4 bytes) - encoded in the big-endian (network) byte order, which means that the address byte length equals 8 bytes. In case of IP v.6, the address part is 16 bytes long, making the whole address length equal to 20 bytes.
+
+
+
+
+\subsection{Message fragmentation}
+
+The size of the ``Length'' field (UDP message header) sets a theoretical limit of the message size to 65'535 bytes (8 byte header + 65'527 bytes of data) for a UDP datagram. The practical limit for the data length, which is imposed by the underlying IPv4 protocol, is 65'507 bytes (65'535 - 8-byte UDP header - 20-byte IP header). To allow sending larger messages, \emph{HyCybe} provides message fragmentation - splitting messages to smaller messages by the sending node, and assembly of the original message by the receiving node. For that purpose, the message header ``Header extension'' field is used - 4 bytes are reserved for fragmentation information. First two bytes denote the fragment index (fragments are numbered starting from 0), and the latter two bytes denote the total number of fragments (both values should be equal to 0 if the message is not fragmented). If the message length exceeds the specified maximum, the message data would be split to fragments of size: $$dataFragmentLength = fragmentLength - headerLength$$ and sent in separate UDP messages. In general case, the message header length depends of the sizes of the data structures used within the header (node ID length and network address length, as well as any additional header extensions). However, for a specific configuration (the number or dimensions and hierarchy levels of the hierarchical hypercube, the network address representation, and header extensions), the header length is known in advance. The default fragment length (maximum \emph{HyCube} message size) equals 32'767. However, this value is not imposed by the protocol. Moreover, individual nodes may use different values - the knowledge of the fragment size is not required for message reassembly.
+
+
+
+
+\subsection{Public/private addresses}
+
+\emph{HyCube} protocol allows nodes to use private IP addresses with the use of NAT (network address translation) and still be able to communicate (both directions) with other nodes outside the private network. To achieve that, other nodes must be aware of the node's translated (public) IP address and port, which means that the connecting node must also be aware of its public IP address and port (for sending information about itself to other nodes). It should be possible to set the public address explicitly at the node level, or the address may be discovered by the node when connecting to the system. To achieve that, when a node connects to the DHT (by sending a JOIN message), the information about the connecting node's public address, contained in the JOIN\_REPLY message, is then used by that node in any further interactions. Because more than one node may send the JOIN\_REPLY message, the information sent within the first JOIN\_REPLY message received should be used. To allow the described mechanism to discover nodes' public IP addresses and ports, it is required that the node, to which the joining node connects, be contacted via the public network (the translation has to be made). Otherwise, the information sent within the JOIN\_REPLY message would be wrong.
+
+
+
+
+
+
+
+
+% ex: set tabstop=4 shiftwidth=4 softtabstop=4 noexpandtab fileformat=unix filetype=tex encoding=utf-8 fileencodings= fenc= spelllang=pl,en spell:
+
+

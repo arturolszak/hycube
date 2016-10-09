@@ -1,0 +1,163 @@
+
+\chapter{Security and privacy}
+\label{sec:security}
+
+The following sections discuss the security enhancements employed by \emph{HyCube}, which are essential elements of real peer-to-peer systems, as well as the privacy features that provide anonymous request-response communication, maintaining the identities of both communicating parties secret. Section \ref{sec:secureRouting} presents two routing security enhancements - introducing the secure routing tables concept and randomized next hop selection. Section \ref{sec:accessControlAuthentication} discusses access control and authentication mechanisms - it is explained how application-specific access control and authentication mechanisms may be incorporated into the \emph{HyCube} architecture. Section \ref{sec:congestionControl} describes the congestion control mechanism employed by \emph{HyCube}, preventing overloading nodes with processing large numbers of messages, at the same time limiting nodes' vulnerability to DoS/DDoS attacks. Section \ref{sec:privacy} discusses privacy issues - data encryption and anonymity. The section presents the registered and anonymous routes concept, allowing the communicating parties to retain their identities secret.
+
+
+
+\section{Secure routing}
+\label{sec:secureRouting}
+
+\subsubsection{Secure routing tables}
+
+In \cite{secrouting1}, the authors propose secure routing tables - additional constrained routing tables maintained by nodes, which may be used when messages are not delivered with the use of regular routing tables. The constrained routing tables are created based on some strong constraint on the set of node IDs that can fill each slot of the routing table. The constraint should be strong enough to make it difficult to be manipulated by potential attackers. The authors suggest that each entry in the constrained routing table be the closest to the desired point $P$ in the ID space. In the extension of \emph{Pastry} DHT, they define point $P$ as follows: for a routing table of a node with identifier $X$, the slot $j$ at level $i$ (the routing table slot may contain nodes with IDs that share the first $i$ digits with $X$ and have value $j$ in the $i+1$-th digit), $P$ shares the first $i$ digits with $X$, it has the value $j$ in the $i+1$-th digit, and it has the same values of remaining digits as $X$. Nodes closest to meeting this condition (the remaining digits closest to the ones of $X$) would be chosen for the secure routing tables. This approach is a good heuristic for limiting attacks based on propagating false information about possible routing table candidates, because the probability of any node's ID meeting that condition for large number of peers is very low.
+
+The above strategy (with modifications) has been adopted by \emph{HyCube}. For each routing table slot (primary or secondary routing table), the point $P$ is defined as follows: it has the first $i$ digits equal to the address of the hypercube corresponding to the routing table slot and remaining digits equal to those of $X$. Such a formulation is equivalent to the original definition but expressed using the hierarchical hypercube terminology and extending the definition to cover also the secondary routing table. However, the process of calculating the constraint for routing table nodes in \emph{HyCube} is different. In the original solution, the distance from the point $P$ to the ID of the routing table slot candidate is minimized. In \emph{HyCube}, the value being minimized is the distance between $P$ and the point being the result of the XOR operation on the candidate's ID and a certain secret key, maintained by each node. This secret key may be randomly re-generated after analyzing every $n_{change}$ candidates ($n_{change}$ is a system parameter). Additionally, to avoid replacing the constrained routing table nodes every time the secret key is changed, every routing table slot contains the value of the distance calculated when the node was added to the routing table. The node is replaced only if the distance to the new node ID (result of the XOR function on the ID and the new secret key) is smaller than the distance stored in the routing table slot. Such an approach makes it even more difficult for any attacking node to track the criterion (the secret key) used to make the node selection, i.e. to determine a way to be included in another node's routing tables, especially in routing tables of a large number of nodes, which makes it a very good protection against the Eclipse attack.
+
+Combined with the received message acknowledgment mechanism (Section \ref{sec:routing}) and resending, it is possible to configure \emph{HyCube} to switch to secure routing after a given number of unsuccessful trials. It is therefore possible to use the regular routing tables for efficient routing, and fall back on the secure routing tables only when needed. Furthermore, \emph{HyCube} allows forcing the use of secure routing tables explicitly (for routing, lookup, search, as well as for the operations on resources).
+
+
+
+\subsubsection{Random next hop selection}
+
+In addition to the use of secure routing tables, \emph{HyCube} may enable one additional heuristic when regular routing fails - skipping a certain random number of the best next hops found in the routing tables (next hop selection). The same behavior may be forced on subsequent nodes along the path by specifying an appropriate flag in the message header. The number of nodes to be skipped is generated based on the normal distribution with the mean and standard deviation (scale) specified by system parameters. Either absolute values of the generated numbers are used, or for the negative values, no nodes are skipped (the behavior is controlled by a parameter value). Additionally, the number of randomly skipped nodes may be limited by an upper bound (also defined by a parameter value), and another system parameter defines whether the nodes skipped should include the exact match (message recipient) or not. The parameters of the distribution should be chosen in a way that would prevent skipping too large numbers of nodes in individual steps (0, 1 or 2 next hops should be skipped in most cases). Otherwise, such an approach may increase the expected path length.
+
+The technique of skipping a random number of next hops in route selection provides a very good way of resending messages using different routes every time (with certain probability), still retaining comparable expected path lengths. However, to avoid potential route length increases, this mechanism should be applied only when a message is not delivered when using normal routing (the best next hops).
+
+
+
+
+
+\section{Access control and authentication}
+\label{sec:accessControlAuthentication}
+
+\subsubsection{Access control}
+
+In certain cases, it would be desirable to employ some application-specific restrictions to access the system. By default, the access to the DHT is open and any node can connect to the system by contacting any node already existing in the DHT. However, the architecture of \emph{HyCube} allows implementing any application-specific access control mechanism.  The \emph{HyCube} library architecture supports defining external modules implementing certain interfaces, which process all messages being sent, as well as all received messages (\emph{message send processors} and \emph{received message processors}). Each message processor (either message send processor or received message processor) implements a method taking the message object as an argument. The method returns a boolean value indicating whether the message should be processed further or should be dropped. The access control mechanism may be implemented by registering additional message processors, which, depending on the access control logic, could allow or prevent further processing.
+
+
+\subsubsection{Authentication}
+
+Although in most cases, the identities of the communicating parties are not important, in certain applications, it may be crucial to verify senders of messages. Authentication may be realized, for example, by public key cryptography - by providing digital signatures of the messages being sent, or by encrypting (with the private key) certain content specified by the verifying party. This verification data may be exchanged either within application specific messages, or may be included in message headers (\emph{HyCube} protocol allows extending the message header with application-specific data) and processed by message send processors and received message processors.
+
+To restrict nodes from using any arbitrarily chosen identifiers (and to prevent malicious nodes from using other nodes' identifiers), it is possible to base the node identifiers on nodes' public keys in a way that would make it easy to validate the node ID based on its public key, and very difficult to find two different keys resulting in the same node ID. Thus, the node ID may be, for example, equal to the public key itself, or, if the public key is longer than the node identifier, a cryptographic hash function - digest of the public key may be used.
+
+It is also possible to verify message senders on the network level (e.g. IP addresses), for messages that are supposed to be sent to the node directly (not routed) from the sender (e.g. LEAVE or NOTIFY messages).
+
+
+
+
+
+
+\section{Congestion control}
+\label{sec:congestionControl}
+
+\emph{HyCube} employs a simple congestion control mechanism - limiting the maximum number of messages processed in a specified time interval. When receiving a message, the node checks whether the message limit is not already exceeded. If the message is within the specified limit, it is processed normally, and the process time is saved for future checks. Otherwise, the message is dropped. \emph{HyCube} allows defining a general limit - for all received messages (regardless of the message type), as well as limits for individual message types (for individual message types, the expected numbers of messages received may be different). These limits should be adjusted to the application and configuration (for example the expected number of keepalive or recovery messages).
+
+Such a simple approach is able to prevent congestions on the node level, and partially protect against DoS attacks. The solution would also limit overloading certain nodes by too many nodes being connected to them (storing references in their routing tables). If a node is overloaded (has too many incoming connections), at some point, it will start dropping the keepalive messages received from the requesting node, which will eventually cause the reference to be removed from the routing table, decreasing the overhead.
+
+
+
+
+
+
+\section{Privacy}
+\label{sec:privacy}
+
+The following sections discuss the mechanism used in \emph{HyCube} for ensuring a high level of privacy by allowing data encryption and retaining anonymity.
+
+
+
+
+\subsection{Data encryption}
+
+Data encryption in \emph{HyCube} may be carried out in two ways. In the simplest scenario, the message data may be encrypted on the application level. However, the mechanism of message processors (message send processors and received message processors) also allows registering separate application-specific modules that could automatically encrypt the message content before sending and decrypt the content before processing by subsequent message processors. The encryption may be symmetric or asymmetric, depending on the application (which should also define the methods for secure key exchange).
+
+
+
+
+\subsection{Anonymity}
+\label{sec:anonymity}
+
+\emph{HyCube} employs a technique ensuring anonymity that is similar to the one presented in \cite{freenet}, to provide anonymous request-response functionality, where neither the requestor, nor the responding node are known to any other node that may access the messages being exchanged (even the requestor does not know to which node the request is eventually delivered, and the node receiving the request does not know which node is the actual requesting node).
+
+
+
+
+\subsubsection{Registered routes}
+
+When routing a message, normally, nodes on the route find next hops and pass the message to them, not saving any information about the message. However, \emph{HyCube} also allows routing messages using registered routes, in which case, every node routing the message saves information about the message: a reference to the node from which the message was received (or information that the node is the original sender of the message) and a reference to the node to which the message was routed. The information is stored by nodes for a certain time (defined by a system parameter). Additionally every message is given a number \emph{routeID}, which is modified by the nodes along the route. For every message routed, every routing node should also store the \emph{routeID} value received in the message, and the new value of \emph{routeID} assigned by the node. The purpose of storing the information about routes is to make it possible to send responses back along the same routes. Based on the \emph{routeID}, and the direct sender, every node along the path should be able to determine the node that originally delivered the message, and pass the response to this node, with the original value of the \emph{routeID}.
+
+To indicate whether the message should be routed via a registered route or whether the message is a response being routed back along the registered route, in addition to \emph{routeID} nodes set values of two flags in the message header: \emph{RegisterRoute} and \emph{RouteBack}. Based on these values, nodes are able to determine how the message should be routed.
+
+To retain the anonymity of the requesting node, every node along the route should replace the sender fields (message header) by its own node ID and network address. In such a case, any node receiving the message would only see the information about the direct sender of the message, making it impossible to determine whether the node sending the message is the original sender of the message, or just an intermediate node routing the message. The same procedure should be followed when routing back responses.
+
+Using the technique described above, it is possible to realize any response-request services in an anonymous way. For example, considering inserting resources (PUT), or retrieving the resources (GET) from the distributed hash table, PUT/GET and PUT\_REPLY/GET\_REPLY messages would be routed in such a way that no node (including the node storing/returning the resource) would know the identity of the node that initiated the request, and no node (including the requestor) would know the identity of the node sending the response. However, to achieve such anonymity, one more modification should be made - nodes should ignore any message having their own ID specified as the recipient of the request message. Otherwise, routing the message to the node matching its recipient field would mean that the message would not be routed any further, and would suggest that the response is returned by that particular node. The decision regarding handling exact-match messages should be taken at the application level.
+
+Registered routes may also be used for routing application-level messages, in which case, the node receiving the message would be able to retrieve the \emph{RegisterRoute} flag value and the \emph{routeID} from the message, and, despite not knowing the identity of the sending node, would be able to continue communicating with the sender. Setting the \emph{RegisterRoute} flag would also affect the way the message delivery acknowledgments (ACK messages) are sent. Normally, acknowledgments are sent directly to the sending node. In case the flag \emph{RegisterRoute} is set to \emph{true}, the ACK message would be sent back to the sender along the registered route, setting the \emph{RouteBack} flag value to \emph{true} and setting the value of \emph{routeID} to the value received within the original message.
+
+For security reasons, \emph{HyCube} provides a possibility of blocking registered routes (by setting a system parameter value). Appropriate configuration should be chosen depending on the requirements of the application.
+
+
+
+
+\subsubsection{Hiding the hop count and time-to-leave information}
+
+Because the message header contains the TTL field (number of hops after which the message is dropped), as well as the number of hops the message already passed, to retain anonymity, this information should be somehow hidden. Otherwise, it would be possible to determine the sender of the request or the response by the node receiving the message directly from the sender. To prevent such situations, for the anonymous messages (\emph{AnonymousRoute} message header option set to \emph{true}), the number of hops should be set to the maximum possible value, which will make it unable to determine the actual number of hops passed and prevent increasing this value by consecutive next hops. \emph{HyCube} employs two different techniques for concealing the TTL message field (configurable). In the first scenario, any node routing the message, decrements the TTL value only with certain probability (normally, the TTL is decremented by each routing node). In the second scenario, every node along the route, after decrementing the TTL, adds a certain random number to the current TTL value. The distribution of this random number should, however, ensure a limited expected number of potential hops. Both approaches make it impossible for intermediate nodes to determine whether direct senders of received messages are the original senders, or routing nodes.
+
+
+
+
+
+\subsubsection{Steinhaus transform and anonymity}
+
+An important remark regarding the Steinhaus point (see Sections \ref{sec:steinhaus} and \ref{sec:varSteinhaus}) and the anonymity should be made. Let us consider an extreme situation, where a node routes (via a registered route) a message to a certain recipient ID (key) that is the furthest possible ID in the address space (in terms of the Euclidean metric). In such a case, when routing with the use of the Euclidean metric, any node receiving such a message (directly from the sender) would be certain that the direct sender is the original sender of the message. Otherwise, the message would have already be routed to a closer node. On the other hand, with the use of the Steinhaus transform, even the most distant node (Euclidean) may be closer to the destination than the previous node. This fact makes it impossible to prove, based on the sender ID field, whether the direct sender is the original sender of the message.
+
+However, when routing a message using a metric with the Steinhaus transform applied, the value of the Steinhaus point (message header), is set to the ID of the closest (Euclidean) point reached so far. In the case of a message routed between two most distant nodes, initially, the Steinhaus point would be given the value of the sender ID, which would at the same time expose the original message sender. To overcome this problem, for anonymous messages (\emph{AnonymousRoute} header option set to \emph{true}), if the sending node determines that it is likely to be the most distant existing node to the recipient, the initial Steinhaus point value is given the value of the ID of the second best next hop found in the routing tables (using the original Steinhaus point). In such a case, the only node that could determine that the sending node is the original sender would be the node that was set as the new Steinhaus point (normally, the message should not be routed again to the Steinhaus point). However, the message would not be routed to this node, because the value of the Stainhaus distance using the new Steinhaus point value would be the largest among all neighborhood set nodes (and self). For any value of the Steinhaus point, different than the initiating node, it is difficult to determine the source of the message, because the message might have been routed from many possible nodes.
+
+The sending node $X$ determines whether it is likely to be one of the most distant nodes to the recipient $Y$ by checking the following condition:
+
+\begin{equation} \label{eq:steinhausAnonymityEnableCheck}
+	\left|\{N \in NS : d(N, Y) \leq d(X,Y)\} \right| \geq \ |NS| \cdot \zeta
+\end{equation}
+
+\noindent
+where $NS$ is the sending node's neighborhood set, $d$ is the Euclidean distance function, and $\zeta \in (0; 1]$ is a system parameter. For values of $\zeta$ close to $1$, whenever the condition \ref{eq:steinhausAnonymityEnableCheck} is satisfied, almost all neighborhood set nodes are closer to $Y$ than $X$, which would normally happen only when $X$ is the most distant node to $Y$ (or one of the most distant nodes). The sensitivity of the check may be controlled by changing the value of $\zeta$. For smaller values of $\zeta$, the Steinhaus point anonymity will be enabled for larger number of distant nodes. However, the value should not be too small, to limit the number of false positives (in certain cases, the neighborhood set may be not uniformly distributed in terms of directions). The default value is $\zeta = 0.9375$ (for fully populated neighborhood sets, the condition \ref{eq:steinhausAnonymityEnableCheck} is satisfied for at least 15 closer nodes of total 16 neighborhood set nodes).
+
+If the Steinhaus transform is used for calculating distances only when the prefix mismatch heuristic is already applied (Section \ref{sec:varSteinhaus}), the prefix mismatch heuristic should be switched on immediately if the condition \ref{eq:steinhausAnonymityEnableCheck} is satisfied. Following the same rule by all nodes eliminates the possibility of detecting the original message sender based on the Steinhaus point value.
+
+
+
+
+
+\subsubsection{Anonymous routes}
+
+The registered routes mechanism may be used for realization of anonymous request-response services or for routing data messages that may be processed by the application, allowing sending responses to the anonymous sender. However, in some situations, the response may be not needed, in which case, storing the registered route information by individual nodes is not necessary. The flag \emph{AnonymousRoute} in the message header is used to determine whether the message is anonymous. When a message is sent with the \emph{AnonymousRoute} flag set to \emph{true}, every node along the route should replace the message's original sender node ID and network address with its own node ID and network address. Additionally the option forces concealing the ``TTL'' and the ``Hop count'' header fields, and modifies the initial Steinhaus point if the sending node determines it is one of the most distant nodes to the recipient in the hierarchical hypercube. This option can be set to \emph{true} together with the \emph{RegisterRoute} or \emph{RouteBack} option, in which case, the message will be routed along a registered route, and additionally, concealing the ``TTL'', ``Hop count'' and ``Steinhaus point'' fields will be forced.
+
+When an application-level message is sent using an anonymous route, and the route is not registered, the message delivery acknowledgment should not be sent to the sender, because the original sender is unknown, and the ACK message would not be delivered. Thus, if such an anonymous message is sent, the sender should not expect the the delivery acknowledgment.
+
+Whenever an anonymous DHT request (PUT, REFRESH\_PUT, GET, DELETE) is received, the response should also be sent anonymously. However, GET requests sent anonymously, with the route not being registered, should be immediately dropped by any node receiving it. Because the original request sender is unknown, it would be not possible to return the result to the sender. For PUT, REFRESH\_PUT and DELETE requests sent anonymously without the route being registered, the requests should be processed, but no responses should be sent, as the original request senders are unknown.
+
+Every node routing an anonymous message updates the original message sender, which may cause messages sent by different nodes to be detected as duplicates. Thus, \emph{HyCube} allows disabling message duplicate detection mechanism for anonymous messages (anonymous routes). For security reasons, \emph{HyCube} also provides a possibility of blocking routing anonymous messages (by setting a system parameter value). Appropriate configuration should be chosen depending on the requirements of the application.
+
+
+
+
+\subsubsection{Anonymous resource replication}
+
+REPLICATE messages are normally sent directly to nodes that the resource is replicated to, which reveals the content of the storage of the node performing the replication. However, the nodes receiving the REPLICATE messages do not contact the sender directly to retrieve the resource, but get the resource by routing a regular GET message, possibly receiving the resource from another node. Thus, if the GET/GET\_REPLY messages are sent using anonymous registered routes, and the TTL is concealed, the actual transmission of resources is completely anonymous. Nevertheless, if retaining the storage content secret is required, depending on a system parameter value, the REPLICATE messages themselves, instead of being sent directly, may be routed anonymously to the destination node (anonymous routes). However, as the destination node is stored in the sending node's neighborhood set, normal next hop selection would send the message directly to the replication node anyway. Thus, the direct recipient of the REPLICATE message should be randomly selected among all nodes to which the replication information is being sent (or among all neighborhood set nodes). Such an approach would conceal the information about the actual node storing the resource (nodes would only be informed about the fact that the resources exist), and there would be no confirmation whether the node receiving the replication info eventually retrieved the resource or not.
+
+
+
+
+
+
+
+
+
+
+
+
+% ex: set tabstop=4 shiftwidth=4 softtabstop=4 noexpandtab fileformat=unix filetype=tex encoding=utf-8 fileencodings= fenc= spelllang=pl,en spell:
+

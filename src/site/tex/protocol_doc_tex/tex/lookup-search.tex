@@ -1,0 +1,90 @@
+\chapter{Lookup and search procedures}
+\label{sec:lookupSearch}
+
+The previous chapter concentrated on the geometry and the routing algorithm of \emph{HyCube}. From the DHT perspective, two other algorithms are also of a great importance - lookup and search. Instead of routing a message, in many cases, it is more adequate for a node to find a node or nodes that are the closest ones in the system to a given key (node ID) and communicate with these nodes directly. Because lookup and search algorithms are performed by multiple nodes, the whole lookup/search process will be referred to as lookup/search procedures. Lookup is a procedure performed by a node that results in finding the node closest to a given ID, while search results in finding a requested number of closest nodes to the given key in the system. During the lookup/search procedure, the initiating node communicates with other nodes in the system, retrieving information about their neighbors. Using the references returned, the searching node makes decisions which nodes should be contacted next, until the closest nodes are found. No message is routed further, and, in each step, the decision which nodes should be contacted next is made locally.
+
+In both, lookup and search procedures, the initiating node may require the requested nodes to return multiple references to nodes closest to the specified key. The routing tables are searched exactly as described in Section \ref{sec:routing}, but the next hop selection finds the requested number of best next hops, according to the same criteria. If multiple references are supposed to be returned by the next hop selection algorithm, the prefix mismatch heuristic (Section \ref{sec:pmh}) or falling back to Euclidean routing (Section \ref{sec:euclideanAfterSteinhaus}) is applied only when no nodes are found at all. Often, the next hop selection algorithm might not be able to find as many nodes fulfilling the next hop criteria as requested. In such cases, if at least one node is found, the next hop selection is considered successful, and the node/nodes found are returned to the requestor.
+
+
+
+\section{Lookup procedure}
+
+In the node lookup procedure, as opposed to routing, next hop selection is made by the initiating node. Nodes receiving the lookup request do not route the message, but they send back (to the initiating node) a reference to a node or nodes that are the best next hop candidates. However, the decisions regarding the next node selection are made locally. This is sometimes referred to as iterative routing, as opposed to recursive routing. To ensure that the procedure is convergent to the lookup node, next hops must satisfy the same conditions as in the routing procedure, i.e. they must share a longer prefix with the destination node than with the previous node or share the same prefix length but be closer to the lookup node than the current node. The metric used is the same as the one used in routing, and the prefix mismatch heuristic also applies whenever a node close enough is reached. When the lookup node is found, it may then be contacted directly, and application-specific operations may be performed. Although node lookup requires more network traffic, and the overall lookup latency is greater (the number of messages exchanged is at least doubled), the main advantage of such an approach is the possibility of returning and sending the lookup request to another node whenever any node requested does not return closer references. This reduces the risk of a route failure due to any single node not being able to route the message, and additionally makes it possible to find the lookup node using more roundabout paths. The node lookup procedure is initiated with three parameters:
+
+\begin{itemize}
+	\renewcommand{\labelitemi}{$\bullet$}
+	\item $key$ - the ID of the lookup node
+	\item $\beta$ - the maximum number of nodes returned by intermediate nodes
+	\item $\gamma$ - the number of temporary nodes stored during the lookup
+\end{itemize}
+
+\smallskip
+\noindent
+During the whole lookup, the initiating node maintains a set $\Gamma$ containing $\gamma$ closest (Euclidean) nodes found so far. The lookup procedure consists of two phases:
+
+\begin{enumerate}
+
+\item Initially, $\Gamma$ is filled with at most $\gamma$ closest nodes (to the lookup node ID) from local routing tables and the neighborhood set (variable Steinhaus metric), and the initial lookup request is sent to the closest node in $\Gamma$. After receiving a response from the requested node (max. $\beta$ references), $\Gamma$ is updated so that it includes $\gamma$ closest nodes from the nodes currently stored in $\Gamma$ and the returned nodes, and the next request is sent to the node returned. If, however, no node is returned, the next request is sent to the closest node in $\Gamma$ that has not been yet requested.
+For every node stored in $\Gamma$, virtual route information is maintained - the Steinhaus point and flags indicating whether the prefix mismatch heuristic has already been enabled for this virtual route and whether the Steinhaus transform has been switched off (no closer nodes found with the use of Steinhaus transform). Initially, for all nodes found in local routing tables, the Steinhaus point is set to the ID of the initiating node, and the prefix mismatch heuristic flag is set based on the analysis of the local neighborhood set. These values are included in every lookup request, and the requested nodes should take these parameters into account during next hop selection (local closest nodes search). Every requested node, during the next hop selection, updates the Steinhaus point for the virtual route if it is closer to the destination (Euclidean) than the current Steinhaus point, determines (based on its neighborhood set) whether it is close enough to the lookup node to enable the prefix mismatch heuristic (which then remains enabled for this virtual route), and whether the Steinhaus transform should not be applied any more (no closer nodes found with the use of Steinhaus transform). The updated parameter values are sent back to the requestor within the lookup response message. The procedure continues until the lookup node reference is returned, or until no new nodes are returned.
+
+\smallskip
+\item When the lookup node is not found (the lookup request has been sent to all the nodes in $\Gamma$ and no closer nodes were returned), the lookup procedure is repeated on the current set $\Gamma$, but is based on the Euclidean metric (no Steinhaus transform), and the prefix mismatch heuristic is enabled (like in the routing procedure). Because for certain nodes (virtual routes) in $\Gamma$, the prefix mismatch heuristic might have already been enabled, there is no need of sending additional requests to them. The closest node found after this phase is considered to be the closest node in the DHT.
+
+\end{enumerate}
+
+The initial lookup (local), in addition to the closest nodes found in the local routing tables, should also consider adding the initiating node (itself) to $\Gamma$, as it may be one of the closest nodes to $key$. If the initiating node ID is one of the $\gamma$ closest nodes found locally, it should be placed in $\Gamma$. Furthermore, the initiating node ID may be returned by any intermediate node (for any virtual route after changing the metric to Euclidean, the initiator node ID may become closer than the current node). No additional local search is however required in the first phase, as it was already performed initially. However, when this node ID (self) is still in $\Gamma$ after switching to the second phase (Euclidean metric and prefix mismatch heuristic in use) a local search should be performed with the prefix mismatch heuristic enabled and based only on the Euclidean distances. Otherwise, some potential references to closer nodes (stored locally) might be omitted.
+
+When $\beta = 1$ and $\gamma = 1$, the node lookup procedure creates one virtual route that is exactly the same as if the message was routed. By increasing $\beta$ and $\gamma$, in case of failures, the procedure is capable of returning and creating alternative routes, and allows sidestepping inconsistent fragments of the connection graph.
+
+
+
+
+\section{Search procedure}
+\label{sec:search}
+
+The purpose of the search procedure is locating $k$ nearest nodes to a given key (identifier) in terms of the Euclidean metric. Search is a basic functionality of a distributed hash table - it is used for storing and retrieving resources and when a new node joins the network. The closest nodes search, like the node lookup procedure, is managed locally by the initiator, which sends search requests to nodes and analyzes the responses. The decisions to which nodes next requests should be sent, are made by the initiating node. The search procedure is initiated with the following parameters:
+
+\begin{itemize}
+	\renewcommand{\labelitemi}{$\bullet$}
+	\item $key$ - the ID for which $k$ nearest nodes should be found
+	\item $k$ - the number of closest nodes to be found
+	\item $\alpha$ - the number of closest nodes to which search requests are sent (parallelism factor)
+	\item $\beta$ - the maximum number of nodes returned by intermediate nodes ($\beta \geq k$)
+	\item $\gamma$ - the number of temporary nodes used during the search ($\gamma \geq k; \gamma \geq \alpha$)
+	\item $ITN$ - ``ignore target node'' - determines whether the set of $k$ nodes should contain the exact match (the node with the identifier equal to the requested $key$) or not
+\end{itemize}
+
+\smallskip
+\noindent
+During the whole search, the initiating node maintains a set $\Gamma$ containing at most $\gamma$ nodes, closest (in terms of the Euclidean metric) to $key$ found so far. The initiating node sends search requests to the closest nodes and processes the responses received. After receiving a response from any node (to which a search request has been sent), the set $\Gamma$ is updated so that it contains at most $\gamma$ nodes closest to $key$ (Euclidean). The search procedure consists of two phases:
+
+\begin{enumerate}
+
+\item In the first phase, the set $\Gamma$ is initially filled with maximum $\gamma$ nodes from local routing tables and the neighborhood set, that are the closest to $key$ (variable Steinhaus metric). In the consecutive steps, the initiating node sends the search request to nodes in $\Gamma$ which have not yet been requested and are within $\alpha$ closest nodes to $key$ found so far. After receiving a search request, the receiving node looks for at most $\beta$ nodes closest to $key$ in its routing tables and neighborhood set. As opposed to the lookup procedure, the closest $\beta$ nodes returned in the search procedure do not have to satisfy the prefix condition, and do not have to be closer to $key$ than the current node. However, the routing tables are searched for $\beta$ nodes sharing the longest prefix with $key$, and among the nodes sharing the same prefix length, the choice is made based on the distance to $key$ (with the use of the variable Steinhaus metric if the prefix mismatch heuristic is already switched on). Upon receiving a search response, the initiating node updates $\Gamma$ with the nodes returned, so that it contains the closest nodes to $key$ from the nodes currently stored in $\Gamma$ and the newly returned nodes.
+For every node in $\Gamma$, the current Steinhaus point is stored, as well as a flag indicating whether the prefix mismatch heuristic has already been applied for finding the node. These values are included in search requests sent to nodes, and the local searches are performed based on these parameters. These parameters may be modified by the nodes processing search requests (updating Steinhaus point if the current node ID is closer to $key$ than the current Steinhaus point, and enabling the prefix mismatch heuristic based on the local neighborhood set), and the updated values are included in the search responses. The first search phase finishes when none of $\alpha$ currently closest to $key$ nodes returns any node closer to $key$ than the most distant node in $\Gamma$ - all $\alpha$ closest nodes in $\Gamma$ have been already requested and returned the responses (or the requests timed out).
+
+\smallskip
+\item The second search phase is a repetition of the first phase, however, requests are sent to all the nodes in $\Gamma$, the prefix mismatch heuristic is enabled, and only the Euclidean metric (no Steinhaus transform) is used in local searches. The search is finished when none of the nodes in $\Gamma$ returns any node closer to $key$ than the most distant node in $\Gamma$. The result of the procedure is $k$ closest nodes to $key$ from the set $\Gamma$.
+
+\end{enumerate}
+
+The second search phase (without the use of the Steinhaus transform) is extremely important, because during the search, nodes are allowed to return also more distant nodes to the $key$ than themselves. There would never be a situation in which no node is found in the routing tables (unless the routing tables are empty, in which case switching to Euclidean routing would as well return no nodes). Thus, the routing tables would never be searched for nodes closest in terms of the Euclidean metric (finding no nodes is the condition for switching off the Steinhaus transform), which could lead to omitting some nodes that are close to $key$.
+
+The initial search (local), in addition to the closest nodes found in the local routing tables, should also consider adding the initiating node itself to $\Gamma$ (if the initiating node ID is one of the $\gamma$ closest nodes found locally), as it might be one of the closest nodes to $key$ in the system. Furthermore, a reference to the initiating node may be returned by any requested node, in which case, no additional local search is required in the first search phase, as it was already performed initially. However, when this node ID (self) is still in $\Gamma$ after switching to the second phase (Euclidean metric and prefix mismatch heuristic in use), a local search should be performed again with the prefix mismatch heuristic enabled and based only on the Euclidean distances. Otherwise, some potential references to closer nodes (stored locally) might be omitted.
+
+The value of $\gamma$ should be at least equal to $k$. However, it may be greater than $k$ to allow more roundabout search paths. Especially, for small values of $k$, such roundabout paths are important so that the procedure finds also the nodes that are located in the hierarchical hypercube on the opposite side of the point $key$ than the initiating node.
+
+Whenever a local search (next hop selection) is performed by a certain node for the $key$ equal to its own identifier (which would update the value of the Steinhaus point to the value of $key$ - it would be the closest point reached so far), the search should be continued without the use of the Steinhaus transform (all virtual routes starting from this node). If the value of the Steinhaus point is equal to the $key$ (destination), as described in Section \ref{sec:varSteinhaus}, $D'(x,y) = \frac{2D(x,y)}{D(x,a) + D(y,a) + D(x,y)} = \frac{2D(x,y)}{D(x,y) + D(y,y) + D(x,y)} = 1$, regardless of the distance $D(x, y)$. This fact would make it impossible to differentiate nodes based on the distance to $key$. Such a scenario would never happen during the lookup procedure, as finding the exact match would immediately return it. However, it is very important when considering the search procedure.
+
+If the parameter $ITN$ is set to \emph{true}, the value of this parameter is included in every request message, and all local searches (next hop selections) should skip the exact match. This parameter is useful when a node performs a search for closest nodes to its own identifier. In such a case, returning a reference to itself would make no sense. There is also no need to re-check local routing tables after switching to the second search phase, because when the distance equals 0, the initial local search would be performed with the prefix mismatch heuristic enabled anyway, and the Steinhaus metric would not be applied.
+
+As opposed to the lookup procedure, in the search procedure, the initial values of the Steinhaus points (for initial nodes in $\Gamma$ found locally) are not set to the initiating node ID, but to the IDs of the initial search nodes themselves. If the initiating node is closer to $key$ than the requested node (at one extreme equal to $key$, in which case the Steinhaus transform would never be applied), the influence of using the Steinhaus transform could possibly be reduced.
+
+
+
+
+
+
+
+% ex: set tabstop=4 shiftwidth=4 softtabstop=4 noexpandtab fileformat=unix filetype=tex encoding=utf-8 fileencodings= fenc= spelllang=pl,en spell:
+
