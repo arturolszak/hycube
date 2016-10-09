@@ -20,7 +20,9 @@ deploy:
   api_key:
     secure: vB0d2RdSz/o1qy56tqM+/vbAB7zpIJkYU/TWHhXYUbYDEEcPlseY1hpRYGSN09x0LHBLNpZSxfVPdwAagoAVWMC7YlSSJoV1W2vwicleILEywxGkZs0oB2xf200W78l43iYdnwWZa/PyihcsT+zWffiX3l0Th26Rs4AuPtWyMbBSABi1js0sR3Y036WBUF04NXaTig6fvvTZ+FEGLrRDTH6R+td2VJ4V7FlUV1FBMt3hMUfx0q3QFxdg1y5EQWPPXu3PFCcXKsU/ckK63ghJikn8N+R6Z9mPzkxbQZkuLbufAWww/a0BNc+UoyTbAbx3e5aMwNo6xyaymyKYDYdPCuGvddd1hgSMh+fDCxraXQLxemsT+fcHtc1ALrYc+ITtFGqagyS3zaodO+Jwvh7q13QRIjYyNVP76ivD7OBcWLvaVEe+AHcHudnocgBq58KGcPTXc9EaEdehdczmHE5lhEgkyuLAeieVmkX5kQvT0ciHv3BSiHTA2B5kjYy0+KvB8g0srr7ifBnT/d7IVL2NDoT8EntS2ZFrkUY1Dm/lsrm4Ho9e/FcZBZbPDsC+GAksUN6b96F438lWjUGHNM95KB9Ohno0+MCemD7onKU0ZM1x/K7CWez7wUp0gx0UQ8mARYvetp5BEBw/aD+L6Ms0ybcMVVlUqa9WcF8e36nssMs=
   file_glob: true
-  file: /home/travis/build/arturolszak/hycube/target/hycube-*.jar
+  file:
+    - /home/travis/build/arturolszak/hycube/target/hycube-*.jar
+    - /home/travis/build/arturolszak/hycube/documentation/*
   skip_cleanup: true
   on:
     tags: true
