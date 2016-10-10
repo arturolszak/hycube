@@ -26,8 +26,8 @@ before_install:
   - test "$TRAVIS_TAG" = "" && mvn versions:set -DnewVersion="$TRAVIS_BRANCH-SNAPSHOT" || mvn versions:set -DnewVersion="$TRAVIS_TAG"
   #- openssl aes-256-cbc -K $encrypted_b9ed87107f17_key -iv $encrypted_b9ed87107f17_iv -in pubring.gpg.enc -out pubring.gpg -d
   #- openssl aes-256-cbc -K $encrypted_b9ed87107f17_key -iv $encrypted_b9ed87107f17_iv -in secring.gpg.enc -out secring.gpg -d
-  - openssl aes-256-cbc -pass pass:$ENCRYPTION_PASSWORD -in secring.gpg.enc -out secring.gpg -d
-  - openssl aes-256-cbc -pass pass:$ENCRYPTION_PASSWORD -in pubring.gpg.enc -out pubring.gpg -d
+  - openssl aes-256-cbc -pass pass:$ENCRYPTION_PASSWORD -in .travis/secring.gpg.enc -out .travis/secring.gpg -d
+  - openssl aes-256-cbc -pass pass:$ENCRYPTION_PASSWORD -in .travis/pubring.gpg.enc -out .travis/pubring.gpg -d
 
 install: true
 
@@ -41,7 +41,6 @@ after_failure:
   - rm pubring.gpg
   - rm secring.gpg
 
-before_deploy: mvn deploy -P shade,sources,javadoc,sign -Djava.version=1.6 --settings .travis/settings.xml
 
 deploy:
   provider: releases
@@ -55,5 +54,7 @@ deploy:
   on:
     tags: true
     jdk: oraclejdk8
+
+after_deploy: mvn deploy -P shade,sources,javadoc,sign -Djava.version=1.6 --settings .travis/settings.xml
 
 after_script:
