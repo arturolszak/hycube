@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 
-echo "Removing the target directory..."
-rm -r target
+echo "Securely removing key files..."
+shred -n 100 -z -u .travis/pubring.gpg
+shred -n 100 -z -u .travis/secring.gpg
