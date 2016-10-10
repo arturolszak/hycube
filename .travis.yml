@@ -19,6 +19,8 @@ jdk:
 
 # for tags (and releases), use the tag name as the development version, and use the branch name with "-SNAPSHOT" suffix otherwise as the development version and release version:
 before_install:
+  - env
+  - printenv
   - test "$TRAVIS_TAG" = "" && echo "Tag is not set -> this is a snapshot version" || echo "Tag is set -> the tag name is the version"
   - test "$TRAVIS_TAG" = "" && mvn versions:set -DnewVersion="$TRAVIS_BRANCH-SNAPSHOT" || mvn versions:set -DnewVersion="$TRAVIS_TAG"
   #- openssl aes-256-cbc -K $encrypted_b9ed87107f17_key -iv $encrypted_b9ed87107f17_iv -in pubring.gpg.enc -out pubring.gpg -d
@@ -30,13 +32,13 @@ install: true
 
 script: mvn clean verify -P shade,sources,javadoc,sign -Djava.version=1.6 --settings .travis/settings.xml
 
-#after_success:
-#  - rm pubring.gpg
-#  - rm secring.gpg
+after_success:
+  - rm pubring.gpg
+  - rm secring.gpg
 
-#after_failure:
-#  - rm pubring.gpg
-#  - rm secring.gpg
+after_failure:
+  - rm pubring.gpg
+  - rm secring.gpg
 
 before_deploy: mvn deploy -P shade,sources,javadoc,sign -Djava.version=1.6 --settings .travis/settings.xml
 
@@ -54,5 +56,3 @@ deploy:
     jdk: oraclejdk8
 
 after_script:
-  - rm pubring.gpg
-  - rm secring.gpg
