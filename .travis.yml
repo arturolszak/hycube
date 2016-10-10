@@ -23,7 +23,9 @@ before_install:
 
 install: true
 
-script: mvn clean verify -P shade,sources,javadoc -Djava.version=1.6
+script:
+  - test "$TRAVIS_TAG" = "" && echo "Snapshot version -> build with no deployment" || echo "Release -> build with deployment"
+  - test "$TRAVIS_TAG" = "" && mvn clean verify -P !shade,!sources,!javadoc -Djava.version=1.6 || mvn clean deploy -P shade,sources,javadoc -Djava.version=1.6
 
 deploy:
   provider: releases
@@ -39,8 +41,7 @@ deploy:
     jdk: oraclejdk8
 
 after_deploy:
-  - mvn deploy -DskipTests=true -P sign --settings .travis/settings.xml
-  - rm pubring.gpg
-  - rm secring.gpg
 
 after_script:
+  - rm pubring.gpg
+  - rm secring.gpg
