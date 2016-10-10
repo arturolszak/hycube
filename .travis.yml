@@ -49,3 +49,4 @@ deploy:
 after_script:
   - rm pubring.gpg
   - rm secring.gpg
+  - ls target/*
