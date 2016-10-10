@@ -1,19 +1,34 @@
 language: java
 
+env:
+  global:
+    - SONATYPE_USERNAME=hycube
+    # SONATYPE_PASSWORD:
+    - SONATYPE_PASSWORD=fakepassword
+#    - secure: "dnOxvALDxzUeiueR61d7gVWgf7u/t3PDLRF5Xs3UNB9WkKhhIBhePVMn0GEnbEeWKUBlH5wEAkdGSJhfwZWiD0qH6vvTQyzmCm+FiCMPabRxdKDvF9gLMcRIlCjvw0wxbT26Qn+UjGFjaYixJdNqPpoj+2Bcx9fkjq9jyGm01d5Y3psJNh//HLw9asOwvCzGd9Xpzlt2mGaXESxhqBYuX2/CJGQ07o9qG47HNBvV0Ubr6SFvGm3sfVMPJbhmZxe6j7iy2Nh7zNXUbawXLiLT0yJIExkKpJvKeMdUIJ2oaTsv4bBAvMKQYvuq7GipymZDBNr1NdCAVi0aNE9Ke6rtvk10dVhXYxwtBFwbaWWnpDmQtKGuluUTHsAfCwpKbqaMc29qYSD8jEHJEscXVtMsNSknOZrVbZBO21cyzZhKaSeugvCYsqvij54ESWLulqhjcxh8G4urUUYOkJN6X7sQBT1RIT6JQm7yaFuGLarQd7TEOnsIFeD+jijeLMsLxPXQlEBdnw5Ah4XGC7LnKCE+IiRbQB8rvsFHwE2sPLPmXDQEmt9wvDi2jizd231weO8c70RnpwZSHRcxXsKsWUUKSafwji9RLTx7WgXc01VYGqaouLZY+gTEvcOuuEwKrqGrht59dS3xqkrBTBxN73rHRiLP7+zcKJk09lcB76ASFQM="
+    # GPG_PASSPHRASE:
+    - secure: "lbSYzQNahhx6KRjpit4+pODnfXF9pRPWaHFvD+dETXva+2rOdzdee5wFC4A8r8nE1wc6dBqw2/pbWe3gfcFjk5SSky3eIKxlIe4PPYraZqfX4DvU3TKh4auAyURcnNDKnv3ouXwkSnILPYdxCrXrr3cZpOUBcLUz1W+ykSg1ii6cP77gcJOHP3ex3+VwxSED/g11lV41EQVc+21j68fftbkY3yqq/X8o/aMKwy1dWHee6V76yrVVBEUKdY7cSlsWvmS/SJW9MksdqRJ1KzUWPTYuRJhz2vJPYJVUPschOH1q6nMaydFi/Gh5ugPnWluIW2Q6iTY5KUwLH/LhmmKOHzcmsGtcLfFpRXYVVWGGcxs3siiM1rVF+ftdfKw7CzGhiVoKqp4ucvq9CmPX/F9vWFy0jm25HZEWbX2/Bo/2lKzoUo7QI3vh6Kjv8bXLZBedmdmAIxmmNqqBFk+pcJbc2KHoafVFI86saWqiHCtCafOTFf8a9aLhECaDmpE8kM/3iOzIvrlgtSZnjSPbrUYdC9tHrzBRvH5XddtFD+K2pvZ98fNJoqeXWDXZ1a97DrzsrwsNu1yishAmjUj4mcNSyQayaEUrMnvBXjAHnr6I4F3bP6H5RDMP6gwgd5FUJjdH3VzuH54hUIsLJOBOe+wfrpLFuJPH/5geXe7R2xMcOVs="
+    # ENCRYPTION_PASSWORD:
+    - secure: "EKHOdlpO0sydPDH/CSQa8F+7ynQUU8qQTqaXPhnhl0xBWS+GTKMbwu5v5ADranWY5CuLBTHL79NOWdaB140eyeP7gyXxy/4H5Q2UQ5K0aIdYA77hlaEHDyzymI5AoXfCTqHzj3bew8YngywLY4J9tF/YlKAQDq/gzSYzOXb2EEVIkBADFpPb98AL8DKKZCHQnX2oz9mzwPCV5/5C89I+PGoBxQnZgLZhjiSGaKIA70e1ba8/mm0o6IHdpbpRY46IpsiGkefXdFCfZ5bGapo952XUcbU/y5/1FpTgiUjbjjcdXIhIHU5ChS/b/cOrYkBLAPw6dzNrcCBfuxI5ZbVP7CEBuP7bPz81kiEhtrmCtNnAsFLiMGJZbG/i1I78TYtaz5O+9G30g78XTR6k6Ikvu0Q8L1xbWqJK5T2GKvyK3D4jBug8zn+nk2qaZFvUX/3Hc2Xw2MCmqNXx/tN9+jZ8k1Lih4y3dhX+rT8e2XiSmW7uSEkpEb+bsv8eC2kXcX6U2WUV+7Frrv8E6IkvDEOjNSNLa+mqRhS0vmJWoRjmkccNGbKmKZNb0WPF3ZcwT/DjPB7UZTXf5zcs0esa15XThuyCYndjSxfcwZidAQZp9qh5K87LFAhOPEwIPo7c6UYPrE/f1QXXdPz7xu1eKS7dMB6T0/6Rpz6JOWq8cWsAbkQ="
+
 jdk:
   - oraclejdk8
   - oraclejdk7
   - openjdk7
   - openjdk6
 
-# for tags (and releases), use the tag name as the development version, and use the branch name with "-SNAPSHOT" suffix otherwise as the development version and release version:
 before_install:
-  - test "$TRAVIS_TAG" = "" && echo "Tag is not set -> this is a snapshot version" || echo "Tag is set -> the tag name is the version"
-  - test "$TRAVIS_TAG" = "" && mvn versions:set -DnewVersion="$TRAVIS_BRANCH-SNAPSHOT" || mvn versions:set -DnewVersion="$TRAVIS_TAG"
+  - bash .travis/update_version.sh
+  - bash .travis/decrypt_keys.sh
+  - ls -l
 
 install: true
 
-script: mvn clean verify -P shade,sources,javadoc -Djava.version=1.6
+script: bash .travis/build.sh
+
+after_success: bash .travis/remove_keys.sh
+
+after_failure: bash .travis/remove_keys.sh
 
 deploy:
   provider: releases
@@ -27,3 +42,7 @@ deploy:
   on:
     tags: true
     jdk: oraclejdk8
+
+after_deploy:
+
+after_script: bash .travis/clean_after_script.sh
