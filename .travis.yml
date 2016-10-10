@@ -19,7 +19,7 @@ jdk:
 
 # for tags (and releases), use the tag name as the development version, and use the branch name with "-SNAPSHOT" suffix otherwise as the development version and release version:
 before_install:
-  - .travis/update_versions.sh
+  - .travis/update_version.sh
   - .travis/decrypt_keys.sh
 #  - test "$TRAVIS_TAG" = "" && echo "Tag is not set -> this is a snapshot version" || echo "Tag is set -> the tag name is the version"
 #  - test "$TRAVIS_TAG" = "" && mvn versions:set -DnewVersion="$TRAVIS_BRANCH-SNAPSHOT" || mvn versions:set -DnewVersion="$TRAVIS_TAG"
@@ -33,11 +33,11 @@ install: true
 #script: mvn clean verify -P shade,sources,javadoc,sign -Djava.version=1.6 --settings .travis/settings.xml
 script: .travis/build.sh
 
-after_success: .travis/clean.sh
+after_success: .travis/remove_keys.sh
 #  - rm pubring.gpg
 #  - rm secring.gpg
 
-after_failure: .travis/clean.sh
+after_failure: .travis/remove_keys.sh
 #  - rm pubring.gpg
 #  - rm secring.gpg
 
