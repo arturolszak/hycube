@@ -3,12 +3,12 @@ language: java
 env:
   global:
     - SONATYPE_USERNAME=hycube
-    #SONATYPE_PASSWORD
+    # SONATYPE_PASSWORD:
     - SONATYPE_PASSWORD=fakepassword
 #    - secure: "dnOxvALDxzUeiueR61d7gVWgf7u/t3PDLRF5Xs3UNB9WkKhhIBhePVMn0GEnbEeWKUBlH5wEAkdGSJhfwZWiD0qH6vvTQyzmCm+FiCMPabRxdKDvF9gLMcRIlCjvw0wxbT26Qn+UjGFjaYixJdNqPpoj+2Bcx9fkjq9jyGm01d5Y3psJNh//HLw9asOwvCzGd9Xpzlt2mGaXESxhqBYuX2/CJGQ07o9qG47HNBvV0Ubr6SFvGm3sfVMPJbhmZxe6j7iy2Nh7zNXUbawXLiLT0yJIExkKpJvKeMdUIJ2oaTsv4bBAvMKQYvuq7GipymZDBNr1NdCAVi0aNE9Ke6rtvk10dVhXYxwtBFwbaWWnpDmQtKGuluUTHsAfCwpKbqaMc29qYSD8jEHJEscXVtMsNSknOZrVbZBO21cyzZhKaSeugvCYsqvij54ESWLulqhjcxh8G4urUUYOkJN6X7sQBT1RIT6JQm7yaFuGLarQd7TEOnsIFeD+jijeLMsLxPXQlEBdnw5Ah4XGC7LnKCE+IiRbQB8rvsFHwE2sPLPmXDQEmt9wvDi2jizd231weO8c70RnpwZSHRcxXsKsWUUKSafwji9RLTx7WgXc01VYGqaouLZY+gTEvcOuuEwKrqGrht59dS3xqkrBTBxN73rHRiLP7+zcKJk09lcB76ASFQM="
-    #GPG_PASSPHRASE
+    # GPG_PASSPHRASE:
     - secure: "Jq72vAZkbGj3hR00LmMQHeqVCWnoKk70aTHe6UmjR+iLcQdDbTfxT8eY+vVQfsjuI7BNDGXbGP6LaHEpmAodyqa1+eFk4h+2ZnjsTgIit9J7YYPt7/MJ3wCNo8GqBQDAHz196fx07V1tj/qwOfo1v4MAKKGEQRjp+NPra6xM/QWOKeBBP+2/JJMaQQ1ygx0Kk7Lc5eClVyz31ftf64qSXFb7VRqvzm5DK0pY1f61fmO84mWAUejoj0PJlEWXRQFAWZzuvEgallD8XvJBd1aEzrANZF2/M/bol2TH/SjMzeBR9CdxDYLhi+ldS+Pe0zXJOJfpp2OlC0SzwQbc+njQR0qQIXJXf8pGTp8CnjYRRFXHgUSiYgzXTHlNLh1xdICc9or8AGlLN3Xp55AaoDgsCX8EN8J0PfV1hb9gaq5WUzSb0L6fwkmvp84WY0vD5dvnqSQEAskpoGS7Iz+svrJnwoSKPpxjaM5eSjeOMCaOD1PWGopA+z6rfjqTWLBRVk2U6Y3p4gUjLai+JKqXUww6qMc3M0qMxutCw8I4X/B1kUqAw/sA5n9lTSBYkqAYrwR/zrJy13f57dtBDT+T+NZakB7Pa46tAY5RpOAfE7h2PWQ2pBEATGwxHFM3OqfqCWRFOf4Z4uz1R2zlAvcV4sOGLE3B6DK8dz5nhP8aMRz1MWA="
-    #ENCRYPTION_PASSWORD
+    # ENCRYPTION_PASSWORD:
     - secure: "npUCBttgbWD6Jz2rOqKyBjQ4EcvUg0w6/THz/LAupfhGCl/Mnr2BJ5yyJy5ZU91LoWpf/yLrq8vVCGmYxRU6/YLF+P5ry76m1NkztWPQDtFE+CISgKmelvDLyyuwgoelF1y29V8NmF1TBUVcL3YmDQ2i195rxVgp+B9wuMMDiNve/az9g481Oxdq8B5Xj+VJJ5PN8v3r3BB/GfDgIARZ/IsGGvuyqz6aSo73ZDI6u3RR9QzWuL8+VbQPLIW5SgVXbUS9ox6x0fktnSdvmclTJPjfVn53jb9FJduPbNc+e1lS+cnqm+sdaix7OF6rAaYxcYoFWItRSA9LdXifyvHXvkKD68aD5JRzbF1jZn6A5sH+BuIhTGyZ5DdJYGmhJw2vxZY8a7Nv5fVkPDJ3ZdGZ5IgcZssuaupFNtgEs7v5K8VYsw0Bwu3LUOdisVAJdM1/eLunf6rKrwO3KVEOX6qg7/NdB0vmLGDnWH6ZVtwhA/nqPyCy4bvgTSPGwyBJPh4K2JI6ciEq7JTTMAYyvbgSu0DWtI2MaUBDxqe3WuXRhYt2vAbPN5gMjux2W9sLMBSjnDennmfDSNEsTPRgZlCfYrXso0zHYE04okdBCvvan5YnviQQjEjJ+8uzaKaWk7kJ1nnwUdC6BN9qvIq2Nfxis6Ub8BaCzLcMuLojXWrxuuo="
 
 jdk:
@@ -19,28 +19,27 @@ jdk:
 
 # for tags (and releases), use the tag name as the development version, and use the branch name with "-SNAPSHOT" suffix otherwise as the development version and release version:
 before_install:
-  - env
-  - printenv
-  - ps -p $$
-  - test "$TRAVIS_TAG" = "" && echo "Tag is not set -> this is a snapshot version" || echo "Tag is set -> the tag name is the version"
-  - test "$TRAVIS_TAG" = "" && mvn versions:set -DnewVersion="$TRAVIS_BRANCH-SNAPSHOT" || mvn versions:set -DnewVersion="$TRAVIS_TAG"
-  #- openssl aes-256-cbc -K $encrypted_b9ed87107f17_key -iv $encrypted_b9ed87107f17_iv -in pubring.gpg.enc -out pubring.gpg -d
-  #- openssl aes-256-cbc -K $encrypted_b9ed87107f17_key -iv $encrypted_b9ed87107f17_iv -in secring.gpg.enc -out secring.gpg -d
-  - openssl aes-256-cbc -pass pass:$ENCRYPTION_PASSWORD -in .travis/secring.gpg.enc -out .travis/secring.gpg -d
-  - openssl aes-256-cbc -pass pass:$ENCRYPTION_PASSWORD -in .travis/pubring.gpg.enc -out .travis/pubring.gpg -d
+  - .travis/update_versions.sh
+  - .travis/decrypt_keys.sh
+#  - test "$TRAVIS_TAG" = "" && echo "Tag is not set -> this is a snapshot version" || echo "Tag is set -> the tag name is the version"
+#  - test "$TRAVIS_TAG" = "" && mvn versions:set -DnewVersion="$TRAVIS_BRANCH-SNAPSHOT" || mvn versions:set -DnewVersion="$TRAVIS_TAG"
+#  #- openssl aes-256-cbc -K $encrypted_b9ed87107f17_key -iv $encrypted_b9ed87107f17_iv -in pubring.gpg.enc -out pubring.gpg -d
+#  #- openssl aes-256-cbc -K $encrypted_b9ed87107f17_key -iv $encrypted_b9ed87107f17_iv -in secring.gpg.enc -out secring.gpg -d
+#  - openssl aes-256-cbc -pass pass:$ENCRYPTION_PASSWORD -in .travis/secring.gpg.enc -out .travis/secring.gpg -d
+#  - openssl aes-256-cbc -pass pass:$ENCRYPTION_PASSWORD -in .travis/pubring.gpg.enc -out .travis/pubring.gpg -d
 
 install: true
 
-script: mvn clean verify -P shade,sources,javadoc,sign -Djava.version=1.6 --settings .travis/settings.xml
+#script: mvn clean verify -P shade,sources,javadoc,sign -Djava.version=1.6 --settings .travis/settings.xml
+script: .travis/build.sh
 
-after_success:
-  - rm pubring.gpg
-  - rm secring.gpg
+after_success: .travis/clean.sh
+#  - rm pubring.gpg
+#  - rm secring.gpg
 
-after_failure:
-  - rm pubring.gpg
-  - rm secring.gpg
-
+after_failure: .travis/clean.sh
+#  - rm pubring.gpg
+#  - rm secring.gpg
 
 deploy:
   provider: releases
@@ -55,6 +54,6 @@ deploy:
     tags: true
     jdk: oraclejdk8
 
-after_deploy: mvn deploy -P shade,sources,javadoc,sign -Djava.version=1.6 --settings .travis/settings.xml
+after_deploy:
 
 after_script:
