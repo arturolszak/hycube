@@ -10,7 +10,7 @@
         <profile>
             <id>sign</id>
             <activation>
-                <activeByDefault>true</activeByDefault>
+                <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
                 <gpg.keyname>245E4002</gpg.keyname>
