@@ -63,3 +63,4 @@ after_deploy:
 
 after_script:
   bash .travis/clean_after_script.sh
+  ls .travis/*
