@@ -29,7 +29,7 @@ install: true
 
 script:
   - test "$TRAVIS_TAG" = "" && echo "Snapshot version -> build with no deployment" || echo "Release -> build with deployment"
-  - test "$TRAVIS_TAG" = "" && mvn clean verify -P !shade,!sources,!javadoc,sign -Djava.version=1.6 || mvn clean deploy -P shade,sources,javadoc -Djava.version=1.6
+  - test "$TRAVIS_TAG" = "" && mvn clean verify -P !shade,!sources,!javadoc,sign -Djava.version=1.6 --settings .travis/settings.xml || mvn clean deploy -P shade,sources,javadoc -Djava.version=1.6 --settings .travis/settings.xml
 
 deploy:
   provider: releases
