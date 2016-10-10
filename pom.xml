@@ -163,19 +163,6 @@
 
         <profile>
             <id>sign</id>
-            <properties>
-                <gpg.executable>gpg</gpg.executable>
-                <gpg.keyname>245E4002</gpg.keyname>
-                <gpg.defaultKeyring>false</gpg.defaultKeyring>
-                <gpg.publicKeyring>${project.basedir}/pubring.gpg</gpg.publicKeyring>
-                <gpg.secretKeyring>${project.basedir}/secring.gpg</gpg.secretKeyring>
-            </properties>
-            <activation>
-                <property>
-                    <name>performRelease</name>
-                    <value>true</value>
-                </property>
-            </activation>
             <build>
                 <plugins>
                     <plugin>
@@ -266,8 +253,8 @@
                 <extensions>true</extensions>
                 <configuration>
                     <serverId>ossrh</serverId>
-                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                    <!--<nexusUrl>https://oss.sonatype.org/</nexusUrl>-->
+                    <autoReleaseAfterClose>false</autoReleaseAfterClose>
                 </configuration>
             </plugin>
 

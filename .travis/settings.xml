@@ -15,6 +15,10 @@
             <properties>
                 <gpg.keyname>245E4002</gpg.keyname>
                 <gpg.passphrase>${env.GPG_PASSPHRASE}</gpg.passphrase>
+                <gpg.executable>gpg</gpg.executable>
+                <gpg.defaultKeyring>false</gpg.defaultKeyring>
+                <gpg.publicKeyring>${project.basedir}/pubring.gpg</gpg.publicKeyring>
+                <gpg.secretKeyring>${project.basedir}/secring.gpg</gpg.secretKeyring>
             </properties>
         </profile>
     </profiles>
