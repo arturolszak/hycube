@@ -21,6 +21,7 @@ jdk:
 before_install:
   - env
   - printenv
+  - ps -p $$
   - test "$TRAVIS_TAG" = "" && echo "Tag is not set -> this is a snapshot version" || echo "Tag is set -> the tag name is the version"
   - test "$TRAVIS_TAG" = "" && mvn versions:set -DnewVersion="$TRAVIS_BRANCH-SNAPSHOT" || mvn versions:set -DnewVersion="$TRAVIS_TAG"
   #- openssl aes-256-cbc -K $encrypted_b9ed87107f17_key -iv $encrypted_b9ed87107f17_iv -in pubring.gpg.enc -out pubring.gpg -d
