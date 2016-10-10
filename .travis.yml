@@ -19,6 +19,11 @@ jdk:
 
 # for tags (and releases), use the tag name as the development version, and use the branch name with "-SNAPSHOT" suffix otherwise as the development version and release version:
 before_install:
+  - chmod 700 .travis/update_version.sh
+  - chmod 700 .travis/decrypt_keys.sh
+  - chmod 700 .travis/build.sh
+  - chmod 700 .travis/remove_keys.sh
+  - chmod 700 .travis/clean_after_script.sh
   - .travis/update_version.sh
   - .travis/decrypt_keys.sh
 #  - test "$TRAVIS_TAG" = "" && echo "Tag is not set -> this is a snapshot version" || echo "Tag is set -> the tag name is the version"
@@ -57,3 +62,4 @@ deploy:
 after_deploy:
 
 after_script:
+  .travis/clean_after_script.sh
