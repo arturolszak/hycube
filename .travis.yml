@@ -29,6 +29,14 @@ install: true
 
 script: mvn clean verify -P shade,sources,javadoc,sign -Djava.version=1.6 --settings .travis/settings.xml
 
+after_success:
+  - rm pubring.gpg
+  - rm secring.gpg
+
+after_failure:
+  - rm pubring.gpg
+  - rm secring.gpg
+
 deploy:
   provider: releases
   api_key:
@@ -45,6 +53,3 @@ deploy:
 after_deploy: mvn deploy -P shade,sources,javadoc,sign -Djava.version=1.6 --settings .travis/settings.xml
 
 after_script:
-  - rm pubring.gpg
-  - rm secring.gpg
-  - ls target/*
