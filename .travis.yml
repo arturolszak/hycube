@@ -23,7 +23,6 @@ cache:
 before_install:
   - bash .travis/update_version.sh
   - bash .travis/decrypt_keys.sh
-  - ls -l
 
 install: true
 
