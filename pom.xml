@@ -143,23 +143,6 @@
                 <plugins>
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>buildnumber-maven-plugin</artifactId>
-                        <version>1.4</version>
-                        <executions>
-                            <execution>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>create</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <doCheck>true</doCheck>
-                            <doUpdate>true</doUpdate>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
                         <artifactId>build-helper-maven-plugin</artifactId>
                         <version>1.12</version>
                         <executions>
@@ -172,7 +155,7 @@
                                     <name>timestampedVersion</name>
                                     <value>${project.version}</value>
                                     <regex>-SNAPSHOT</regex>
-                                    <replacement>-${maven.build.timestamp}-${buildNumber}</replacement>
+                                    <replacement>-${maven.build.timestamp}-1</replacement>
                                     <failIfNoMatch>false</failIfNoMatch>
                                 </configuration>
                             </execution>
