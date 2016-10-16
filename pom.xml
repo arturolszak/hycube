@@ -110,58 +110,6 @@
         </profile>
 
         <profile>
-            <id>shade</id>
-            <activation><activeByDefault>true</activeByDefault></activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-shade-plugin</artifactId>
-                        <version>2.4.3</version>
-                        <executions>
-                            <execution>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>shade</goal>
-                                </goals>
-                                <configuration>
-                                    <minimizeJar>true</minimizeJar>
-                                    <transformers>
-                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer">
-                                        </transformer>
-                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                            <manifestEntries>
-                                                <Class-Path>conf/</Class-Path>
-                                            </manifestEntries>
-                                        </transformer>
-                                        <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                                            <resource>META-INF/maven-dependency</resource>
-                                            <file>${project.basedir}/src/shaded/maven-dependency</file>
-                                        </transformer>
-                                    </transformers>
-                                    <!-- By default, the plugin will replace the project's main
-                                    artifact with the shaded artifact.
-                                    If both the original and the shaded artifact should
-                                    be installed/deployed to the repository, one can configure
-                                    the plugin to attach the shaded artifact as a secondary artifact -->
-                                    <shadedArtifactAttached>true</shadedArtifactAttached>
-                                    <relocations>
-                                        <relocation>
-                                            <pattern>org.apache</pattern>
-                                            <shadedPattern>net.hycube.hidden.org.apache</shadedPattern>
-                                        </relocation>
-                                    </relocations>
-                                    <createDependencyReducedPom>true</createDependencyReducedPom>
-                                    <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <profile>
             <id>sign</id>
             <build>
                 <plugins>
@@ -180,6 +128,42 @@
                         </executions>
                     </plugin>
                 </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>timestamp-snapshots</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <maven.build.timestamp.format>yyyyMMdd.HHmmss</maven.build.timestamp.format>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>1.12</version>
+                        <executions>
+                            <execution>
+                                <id>regex-property</id>
+                                <goals>
+                                    <goal>regex-property</goal>
+                                </goals>
+                                <configuration>
+                                    <name>timestampedVersion</name>
+                                    <value>${project.version}</value>
+                                    <regex>-SNAPSHOT</regex>
+                                    <replacement>-${maven.build.timestamp}-1</replacement>
+                                    <failIfNoMatch>false</failIfNoMatch>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+                <!--suppress MavenModelInspection -->
+                <finalName>${project.artifactId}-${timestampedVersion}</finalName>
             </build>
         </profile>
 
@@ -205,7 +189,6 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <addClasspath>true</addClasspath>
                             <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                             <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                         </manifest>
@@ -218,23 +201,45 @@
             </plugin>
 
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.6</version>
                 <executions>
                     <execution>
+                        <id>jar-with-dependencies</id>
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
                         </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/assembly/assembly-jar-with-dependencies.xml</descriptor>
+                            </descriptors>
+                            <archive>
+                                <manifest>
+                                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                                </manifest>
+                                <manifestEntries>
+                                    <X-Compile-Source-JDK>${java.version.source}</X-Compile-Source-JDK>
+                                    <X-Compile-Target-JDK>${java.version.target}</X-Compile-Target-JDK>
+                                </manifestEntries>
+                            </archive>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>with-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/assembly/assembly-with-dependencies.xml</descriptor>
+                            </descriptors>
+                        </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <!--<descriptorRefs>-->
-                    <!--<descriptorRef>jar-with-dependencies</descriptorRef>-->
-                    <!--</descriptorRefs>-->
-                    <descriptors>
-                        <descriptor>src/assembly/assembly-jar-with-dependencies.xml</descriptor>
-                    </descriptors>
-                </configuration>
             </plugin>
 
             <plugin>

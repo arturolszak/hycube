@@ -2432,6 +2432,107 @@ Multiple node services implement the \emph{MultipleNodeService} interface, speci
 
 
 
+\section{Logging}
+
+The library uses Apache commons-logging library for logging, and therefore can be used with any logging implementation at runtime. Commons-logging comes with support for a number of popular logging implementations, and writing adapters for others is a reasonably simple task. For the purposes of testing the library, Log4j was used. To use the library with Log4j, it is enough to include Log4j library and Log4j configuration file in the classpath. However, it is not set as a "compile" dependency for the project. The choice of the logger is left to the user of the library.
+
+
+
+
+
+\section{Conventions}
+
+This section briefly describes conventions adopted by HyCube library.
+
+\subsection{Logging}
+
+Within the HyCube library, the loggers are accessed through the static methods of class net.hycube.logging.LogHelper. The methods provide access to three loggers (Apache commons.logging):
+
+\begin{itemize}
+	\renewcommand{\labelitemi}{$\bullet$}
+	\item \textbf{user log (net.hycube.log.user)}:\\
+	\noindent
+	The logger used for messages that should be logged at the user (application level). No stack trace should be presented in the user log - just a message briefly describing the event. This logger should be considered node state monitoring log - only major state changes should be logged.
+	\item \textbf{dev log (net.hycube.log.dev)}:\\
+	\noindent
+	The logger used for development, debugging purposes. The log entries should contain full description of the event, including the stack trace, if applicable. For individual classes or log categories, separate loggers (hierarchical) may be created, following the naming convention: net.hycube.log.dev.[full\_class\_name] or net.hycube.log.dev.[log\_category], allowing defining logging levels for individual packages/classes or for common funcionalities. For example: "net.hycube.log.dev.net.hycube.join" or "net.hycube.log.dev.net.hycube.join.searchjoin.HyCubeSearchJoinManager".
+	\item \textbf{msg log (net.hycube.log.messages)}:\\
+	\noindent
+	The logger used for logging information about messages being sent or processed by nodes - used for development, debugging pusposes.
+\end{itemize}
+
+Table \ref{tab:libLogLevels} presents guidelines for choosing logging levels for individual loggers used within the library.
+
+\begin{table}
+\scriptsize
+\begin{center}
+\begin{tabular}{p{2.0cm} p{2.0cm} p{10.5cm}}
+	\hline
+	\textbf{Logger}				& \textbf{Level}	& \textbf{Events}					\\[1mm]
+    \hline
+	\textbf{user log}			& fatal				& no recoverable error, app termination		\\[1.5mm]	
+								& error				& error events that user should be informed about, like for monitoring window, includes events when api returns errors		\\[1.5mm]	
+								& warn				& warning - possible error, but the application may continue		\\[1.5mm]	
+								& info				& interesting events		\\[1.5mm]	
+								& debug				& less important events		\\[1.5mm]	
+								& trace				& least important events at lower level		\\[1.5mm]
+	\hline
+	\textbf{dev log}			& fatal				& no recoverable errors causing application termination		\\[1.5mm]	
+								& error				& errors, exceptions that are not rethrown, external errors or some other errors that should be logged		\\[1.5mm]	
+								& warn				& warning - possible error, but the application may continue		\\[1.5mm]	
+								& info				& important events		\\[1.5mm]	
+								& debug				& less important events, details, data being processed		\\[1.5mm]	
+								& trace				& messages informing about current place of execution, least important events, details and data being processed		\\[1.5mm]
+    \hline
+	\textbf{msg log}			& fatal				& -		\\[1.5mm]	
+								& error				& invalid packet send try		\\[1.5mm]	
+								& warn				& invalid packet received		\\[1.5mm]	
+								& info				& packet sent, packet received		\\[1.5mm]	
+								& debug				& more details about packets being sent/received, packet propagation through layer stack		\\[1.5mm]	
+								& trace				& logs detailed message processing		\\[1.5mm]
+	\hline
+\end{tabular}
+\end{center}
+\caption{Logging levels}
+\label{tab:libLogLevels}
+\end{table}
+
+
+
+
+
+\subsection{Exceptions}
+
+\begin{itemize}
+	\renewcommand{\labelitemi}{$\bullet$}
+	\item Exceptions should be logged only once, just before throwing the exceptions outside the library (API) scope. Logging the same exception stack trace more than once can confuse the programmer examining the stack trace about the original source of exception. The only place that should log and throw are well defined entry points. Logging and throwing might be however allowed in certain situations, when the information logged is of a great importance and requires special attention.
+	\item Whenever an exception is caught and thrown, the thrown exception should include the whole stack trace, the exception caught as a nested exception.
+	\item Exceptions thrown outside the API should not be inner classes
+	\item Exceptions that may be processed outside the API should be checked exceptions
+	\item Throwing unchecked exceptions implicitly outside the API (e.g. exceptions thrown from the JRE classes called by HyCube) should be prevented. Whenever the input data processing might cause throwing an unchecked exception, the data should be validated by the HyCube code before processing (if possible), and any invalid input should be processed by the HyCube code, and, if necessary, an exception should be thrown outside the library.
+	\item Runtime exceptions that are explicitly thrown outside the API should be encapsulated in UnrecoverableRuntimeException instances (cause property)
+	\item Runtime exceptions thrown implicitly (thrown from classes called by HyCube, not being caught/processed by HyCube code) should not be logged. Any explicitly thrown (HyCube-level) exceptions should be logged just before throwing outside the API.
+\end{itemize}
+
+
+
+
+
+
+\subsection{Other}
+
+\begin{itemize}
+	\renewcommand{\labelitemi}{$\bullet$}
+	\item Use of factory methods - allows returning objects of sub-classes
+	\item Use of abstract factories - to allow the use of factories implementing a common interface, allowing instantiation of specific-type objects (implementing a common interface), maintaining the implementation abstraction
+	\item Use of protected fields and methods so that classes are extendable
+\end{itemize}
+
+
+
+
+
+
 
 \chapter{Changelog}
 
@@ -2461,6 +2562,15 @@ Multiple node services implement the \emph{MultipleNodeService} interface, speci
 \end{itemize}
 \newline
 
+\noindent
+\textbf{1.0.3}
+\begin{itemize}
+	\renewcommand{\labelitemi}{$\bullet$}
+	\item Corrected generating artifacts with dependencies
+	\item Removed shaded artifact from the release
+	\item Added a build profile for building timestamped snapshots
+\end{itemize}
+\newline
 
 
 

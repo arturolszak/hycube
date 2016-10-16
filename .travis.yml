@@ -39,6 +39,7 @@ deploy:
   file_glob: true
   file:
     - /home/travis/build/arturolszak/hycube/target/hycube-*.jar
+    - /home/travis/build/arturolszak/hycube/target/hycube-*.zip
     - /home/travis/build/arturolszak/hycube/documentation/*
   skip_cleanup: true
   on:
