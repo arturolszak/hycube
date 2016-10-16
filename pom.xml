@@ -162,10 +162,10 @@
                         </executions>
                     </plugin>
                 </plugins>
+                <!--suppress MavenModelInspection -->
                 <finalName>${project.artifactId}-${timestampedVersion}</finalName>
             </build>
         </profile>
-
 
     </profiles>
 
