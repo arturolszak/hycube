@@ -7,7 +7,7 @@ SONATYPE_PASSWORD
     the Sonatype password for releasing to Maven Central Repository
 
 ENCRYPTION_PASSWORD
-    password used for encryption public and private keys (used to sign artifacts)
+    encryption password for decrypting public and private keys (used to sign artifacts)
 
 GPG_PASSPHRASE
     private key passphrase (for signing artifacts)
